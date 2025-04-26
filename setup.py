@@ -1,14 +1,18 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="cao",
+    name="zhouatie-cao",
     version="1.0.0",
     description="一个捕获终端错误并使用 AI 分析的命令行工具",
     author="zhouatie",
     author_email="zhouatie@gmail.com",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
-    scripts=["bin/cao"],
+    entry_points={
+        "console_scripts": [
+            "cao=zhouatie_cao:main",
+        ],
+    },
     install_requires=[
         "requests>=2.25.0",
     ],

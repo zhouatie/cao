@@ -2,87 +2,41 @@
 
 import sys
 import os
-import subprocess
 
-# 直接执行ls命令测试
-if len(sys.argv) > 1 and sys.argv[1] == "test-direct":
-    print("===== 直接测试 ls /nonexistent_directory =====")
-    
-    # 直接执行ls命令，确保不经过任何shell解析
-    result = subprocess.run(
-        ["ls", "/nonexistent_directory"],
-        shell=False, 
-        stderr=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        text=True
-    )
-    
-    print(f"命令: ls /nonexistent_directory")
-    print(f"返回码: {result.returncode}")
-    print(f"错误信息: {result.stderr}")
-    print("============================================")
-    sys.exit(0)
 
-# 特殊测试命令，完全绕过正常执行流程
-if len(sys.argv) > 1 and sys.argv[1] == "ls-nonexistent":
-    # 执行ls /nonexistent_directory错误并收集
-    result = subprocess.run(
-        ["ls", "/nonexistent_directory"],
-        shell=False,
-        stderr=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        text=True
-    )
-    
-    # 打印错误信息，便于诊断
-    print(f"命令 'ls /nonexistent_directory' 执行失败")
-    print(f"返回码: {result.returncode}")
-    print(f"错误信息: {result.stderr}")
-    
-    # 直接使用该结果（绕过后续逻辑）
-    script_dir = os.path.dirname(os.path.realpath(__file__))
-    project_dir = os.path.dirname(script_dir)
-    sys.path.insert(0, project_dir)
-    
+# 定义自定义导入异常，方便用户识别错误来源
+class CaoImportError(Exception):
+    pass
+
+
+# 尝试导入main函数
+def import_main():
+    """尝试多种方式导入main函数"""
+    # 方法1: 从已安装的包导入(pip/Homebrew安装方式)
     try:
-        from src.cao import call_ai_api, print_with_borders, SUPPORTED_MODELS
-        model_name = "deepseek"
-        model_config = SUPPORTED_MODELS[model_name]
-        
-        error_info = {
-            "command": "ls /nonexistent_directory",
-            "original_command": "ls /nonexistent_directory",
-            "error": result.stderr,
-            "returncode": result.returncode
-        }
-        
-        print(f"正在使用 {model_name} 分析错误...")
-        ai_response = call_ai_api(model_config, error_info)
-        print_with_borders(ai_response)
-        
-    except ImportError as e:
-        print(f"错误: 无法导入cao模块: {e}")
-    
-    sys.exit(0)
+        # 不触发编辑器的导入错误提示
+        cao_module = __import__("zhouatie_cao")
+        return cao_module.main
+    except ImportError:
+        # 方法2: 从项目结构导入(开发环境)
+        try:
+            script_dir = os.path.dirname(os.path.realpath(__file__))
+            project_dir = os.path.dirname(script_dir)
+            sys.path.insert(0, project_dir)
+            from src.zhouatie_cao.main import main
 
-# 获取脚本所在目录的上一级目录（项目根目录）
-script_dir = os.path.dirname(os.path.realpath(__file__))
-project_dir = os.path.dirname(script_dir)
+            return main
+        except ImportError as e:
+            raise CaoImportError(
+                f"无法导入cao模块: {e}\n请确保已正确安装zhouatie-cao或当前在正确的项目目录中"
+            )
 
-# 将项目根目录添加到 Python 路径
-sys.path.insert(0, project_dir)
 
-# 导入并执行 cao.py 的 main 函数
-try:
-    from src.cao import main
-except ImportError as e:
-    sys.path.append(os.path.join(project_dir, "src"))
-    try:
-        import cao
-        main = cao.main
-    except ImportError as e:
-        print(f"错误: 无法导入cao模块: {e}")
-        sys.exit(1)
-
+# 获取main函数并执行
 if __name__ == "__main__":
-    main()
+    try:
+        main_function = import_main()
+        main_function()
+    except CaoImportError as e:
+        print(f"错误: {e}")
+        sys.exit(1)
