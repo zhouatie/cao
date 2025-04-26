@@ -1,1 +1,2 @@
-# 空初始化文件，标记为 Python 包
+# 初始化文件，标记为 Python 包
+from .cao import main
