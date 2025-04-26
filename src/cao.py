@@ -24,7 +24,7 @@ SUPPORTED_MODELS = {
     "ollama": {"api_base": "http://localhost:11434/v1", "model": "qwen2.5-coder:7b"},
 }
 
-DEFAULT_MODEL = "ollama"
+DEFAULT_MODEL = "deepseek"
 
 
 def get_terminal_size():
