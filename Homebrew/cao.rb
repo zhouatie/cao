@@ -3,8 +3,8 @@ class Cao < Formula
 
   desc "一个捕获终端错误并使用 AI 分析的命令行工具"
   homepage "https://github.com/zhouatie/cao"
-  url "https://github.com/zhouatie/cao/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "替换为实际的SHA256值"
+  url "https://github.com/zhouatie/cao/archive/refs/tags/v1.0.0.tar.gz"
+  sha256 "e21c7e8969cf06e7a3b6a2a6edbb85ef9e19a85321841cd120e0208e640d3ed9"
   license "MIT"
 
   depends_on "python@3.10"

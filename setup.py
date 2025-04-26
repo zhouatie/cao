@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="cao",
-    version="0.1.0",
+    version="1.0.0",
     description="一个捕获终端错误并使用 AI 分析的命令行工具",
     author="zhouatie",
     author_email="zhouatie@gmail.com",
