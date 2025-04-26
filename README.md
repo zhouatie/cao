@@ -1,4 +1,4 @@
-# cao
+# cao(🌿)
 
 一个命令行工具，用于捕获终端错误并使用 AI 进行分析和提供解决方案。
 
@@ -18,15 +18,22 @@ brew tap zhouatie/cao
 brew install cao
 ```
 
-### 通过源码安装
+## 使用方法
+
+### 设置 shell 函数（推荐）
+
+为了更好地捕获最近执行的命令及其返回码，建议在您的 shell 配置文件（如 `.zshrc` 或 `.bashrc`）中添加以下函数：
 
 ```bash
-git clone https://github.com/zhouatie/cao.git
-cd cao
-pip install -e .
-```
+function cao() {
+  local last_cmd=$(fc -ln -1 | sed -e 's/^ *//')
+  local last_code=$?
 
-## 使用方法
+  if command -v cao >/dev/null 2>&1; then
+    CAO_LAST_COMMAND="$last_cmd" CAO_RETURN_CODE="$last_code" cao "$@"
+  fi
+}
+```
 
 ### 分析最近一次执行的命令错误（默认行为）
 
@@ -49,7 +56,7 @@ cao -n 42
 ### 指定使用的 AI 模型
 
 ```bash
-cao -m openai your_command_here
+cao -m deepseek your_command_here
 ```
 
 支持的模型:
@@ -71,7 +78,7 @@ cao -d your_command_here
 -   `OPENAI_API_KEY` - 使用 OpenAI 模型时需要
 -   `DEEPSEEK_API_KEY` - 使用 DeepSeek 模型时需要
 
-注意：使用 Ollama 模型时不需要设置 API Key，因为它在本地运行。Ollama 默认使用 qwen2.5-coder:7b 模型，您可以在 `src/cao.py` 中的 `SUPPORTED_MODELS` 字典中修改配置。
+注意：使用 Ollama 模型时不需要设置 API Key，因为它在本地运行。
 
 ## 示例
 
@@ -82,10 +89,10 @@ cao python non_existent_file.py
 # 分析最近一次失败的命令
 cao
 
-# 使用 DeepSeek 模型分析
-cao -m deepseek
+# 使用 Ollama 模型分析
+cao -m ollama
 
-# 使用 Ollama 模型分析（默认）
+# 使用 deepseek 模型分析（默认）
 cao
 ```
 
