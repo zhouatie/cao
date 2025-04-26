@@ -21,9 +21,10 @@ import re
 SUPPORTED_MODELS = {
     "deepseek": {"api_base": "https://api.deepseek.com/v1", "model": "deepseek-chat"},
     "openai": {"api_base": "https://api.openai.com/v1", "model": "gpt-4o"},
+    "ollama": {"api_base": "http://localhost:11434/v1", "model": "qwen2.5-coder:7b"},
 }
 
-DEFAULT_MODEL = "deepseek"
+DEFAULT_MODEL = "ollama"
 
 
 def get_terminal_size():
@@ -100,7 +101,7 @@ def get_last_command_error():
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
                         text=True,
-                        timeout=10,  # 设置子进程超时为 10 秒
+                        timeout=20,  # 设置子进程超时为 20 秒
                     )
 
                     output_text = error_proc.stderr or error_proc.stdout
@@ -245,7 +246,14 @@ def execute_command(command: List[str]):
 def call_ai_api(model_config: Dict, error_info: Dict) -> str:
     """调用 AI API 分析错误"""
     # 根据选择的模型获取对应的 API KEY
-    if "openai" in model_config["api_base"]:
+    # 针对不同的 API 获取对应的 API KEY
+    if (
+        "localhost" in model_config["api_base"]
+        or "127.0.0.1" in model_config["api_base"]
+    ):
+        # 本地运行的 Ollama 模型不需要 API key
+        api_key = None
+    elif "openai" in model_config["api_base"]:
         api_key = os.environ.get("OPENAI_API_KEY")
         if not api_key:
             return "错误: 未设置 OPENAI_API_KEY 环境变量"
@@ -259,7 +267,9 @@ def call_ai_api(model_config: Dict, error_info: Dict) -> str:
     api_base = model_config["api_base"]
     model = model_config["model"]
 
-    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
 
     # 构建提示信息
     # 优先使用原始命令（如果存在）
@@ -302,7 +312,21 @@ def call_ai_api(model_config: Dict, error_info: Dict) -> str:
 
         if response.status_code == 200:
             result = response.json()
-            return result["choices"][0]["message"]["content"]
+            # Ollama API 与 OpenAI API 有稍微不同的响应格式
+            if "localhost" in api_base or "127.0.0.1" in api_base:
+                # Ollama 响应格式
+                if "message" in result and "content" in result["message"]:
+                    return result["message"]["content"]
+                else:
+                    # 兜底处理
+                    return (
+                        result.get("choices", [{}])[0]
+                        .get("message", {})
+                        .get("content", "无法解析 Ollama API 响应")
+                    )
+            else:
+                # OpenAI/DeepSeek 响应格式
+                return result["choices"][0]["message"]["content"]
         else:
             return f"API 请求失败 (状态码: {response.status_code}): {response.text}"
 
@@ -454,11 +478,12 @@ def main():
         print(f"命令 '{error_info.get('command')}' 执行成功，没有错误。")
         sys.exit(0)
 
+    print(f"最后一次命令: {error_info.get('command', '未知命令')}")
+
     # 调试模式打印错误信息
     if args.debug:
         print("\n--- 调试信息 ---")
         print(f"原始命令: {error_info.get('original_command', '未知命令')}")
-        print(f"解析命令: {error_info.get('command', '未知命令')}")
         print(f"返回码: {error_info.get('returncode', -1)}")
         print("错误信息:")
         print(error_info.get("error", "无错误信息"))
