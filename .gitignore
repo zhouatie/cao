@@ -44,3 +44,10 @@ venv.bak/
 test_command.txt
 test_error.txt
 test_returncode.txt
+
+cao_venv/
+__pycache__/
+*.py[cod]
+*.so
+*.bak
+*.egg-info/
