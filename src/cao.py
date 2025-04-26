@@ -46,13 +46,11 @@ def parse_args():
     parser = argparse.ArgumentParser(description="捕获终端错误并通过 AI 分析")
     parser.add_argument("-m", "--model", default=DEFAULT_MODEL, choices=list(SUPPORTED_MODELS.keys()),
                         help=f"选择 AI 模型 (默认: {DEFAULT_MODEL})")
-    parser.add_argument("-l", "--last", action="store_true", 
-                        help="分析最近一次命令的错误")
-    parser.add_argument("-n", "--number", type=int, default=100,
+    parser.add_argument("-n", "--number", type=int,
                         help="分析历史记录中特定行号的错误")
     parser.add_argument("-d", "--debug", action="store_true",
                         help="开启调试模式")
-    parser.add_argument("command", nargs="*", help="要执行的命令")
+    parser.add_argument("command", nargs="*", help="要执行的命令 (如果提供)")
     
     return parser.parse_args()
 
@@ -90,26 +88,30 @@ def get_last_command_error():
             if match:
                 last_command = match.group(1)
         
-        # 执行命令并捕获错误
-        result = subprocess.run(
-            last_command, 
-            shell=True, 
+        # 使用Popen执行命令
+        process = subprocess.Popen(
+            last_command,
+            shell=True,
             stderr=subprocess.PIPE,
             stdout=subprocess.PIPE,
             text=True
         )
+        stdout, stderr = process.communicate()
+        returncode = process.returncode
         
-        if result.returncode != 0:
+        if returncode != 0:
             return {
                 "command": last_command,
-                "error": result.stderr or result.stdout,
-                "returncode": result.returncode
+                "error": stderr or stdout,
+                "returncode": returncode,
+                "original_command": last_command  # 保存完整的原始命令
             }
         else:
             return {
                 "command": last_command,
                 "message": "这个命令执行成功，没有错误",
-                "returncode": 0
+                "returncode": 0,
+                "original_command": last_command  # 保存完整的原始命令
             }
             
     except Exception as e:
@@ -136,26 +138,30 @@ def get_command_by_number(number: int):
             if match:
                 command = match.group(1)
         
-        # 执行命令并捕获错误
-        result = subprocess.run(
-            command, 
-            shell=True, 
+        # 使用Popen执行命令
+        process = subprocess.Popen(
+            command,
+            shell=True,
             stderr=subprocess.PIPE,
             stdout=subprocess.PIPE,
             text=True
         )
+        stdout, stderr = process.communicate()
+        returncode = process.returncode
         
-        if result.returncode != 0:
+        if returncode != 0:
             return {
                 "command": command,
-                "error": result.stderr or result.stdout,
-                "returncode": result.returncode
+                "error": stderr or stdout,
+                "returncode": returncode,
+                "original_command": command  # 保存完整的原始命令
             }
         else:
             return {
                 "command": command,
                 "message": "这个命令执行成功，没有错误",
-                "returncode": 0
+                "returncode": 0,
+                "original_command": command  # 保存完整的原始命令
             }
             
     except Exception as e:
@@ -163,32 +169,66 @@ def get_command_by_number(number: int):
 
 def execute_command(command: List[str]):
     """执行命令并捕获错误"""
-    cmd = ' '.join(command)
-    
-    try:
-        result = subprocess.run(
-            cmd, 
-            shell=True, 
-            stderr=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            text=True
-        )
+    # 如果是处理ls命令
+    if command and command[0] == 'ls' and len(command) > 1:
+        # 直接使用subprocess.run但不使用shell=True，避免shell解析问题
+        try:
+            result = subprocess.run(
+                command,
+                shell=False,
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                text=True
+            )
+            if result.returncode != 0:
+                return {
+                    "command": ' '.join(command), 
+                    "error": result.stderr or result.stdout,
+                    "returncode": result.returncode,
+                    "original_command": ' '.join(command)  # 保存完整的原始命令
+                }
+            else:
+                print(result.stdout, end='')
+                return None
+        except Exception as e:
+            return {
+                "command": ' '.join(command),
+                "error": str(e),
+                "returncode": 1,
+                "original_command": ' '.join(command)
+            }
+    else:
+        # 对于其他命令，使用shell执行
+        cmd = ' '.join(command)
         
-        if result.returncode != 0:
+        try:
+            process = subprocess.Popen(
+                cmd,
+                shell=True,
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                text=True
+            )
+            stdout, stderr = process.communicate()
+            returncode = process.returncode
+            
+            if returncode != 0:
+                return {
+                    "command": cmd,
+                    "error": stderr or stdout,
+                    "returncode": returncode,
+                    "original_command": cmd  # 保存完整的原始命令
+                }
+            else:
+                print(stdout, end='')
+                return None  # 成功执行，无需分析
+        except Exception as e:
             return {
                 "command": cmd,
-                "error": result.stderr or result.stdout,
-                "returncode": result.returncode
+                "error": str(e),
+                "returncode": 1,
+                "original_command": cmd
             }
-        else:
-            print(result.stdout, end='')
-            return None  # 成功执行，无需分析
-    except Exception as e:
-        return {
-            "command": cmd,
-            "error": str(e),
-            "returncode": 1
-        }
 
 def call_ai_api(model_config: Dict, error_info: Dict) -> str:
     """调用 AI API 分析错误"""
@@ -213,18 +253,26 @@ def call_ai_api(model_config: Dict, error_info: Dict) -> str:
     }
     
     # 构建提示信息
-    command = error_info.get("command", "未知命令")
+    # 优先使用原始命令（如果存在）
+    command = error_info.get("original_command", error_info.get("command", "未知命令"))
     error_text = error_info.get("error", "未知错误")
     returncode = error_info.get("returncode", -1)
     
-    system_message = "你是一个命令行错误分析专家。分析以下命令行错误并提供解决方案。"
+    # 调试输出，帮助排查命令传递问题
+    if os.environ.get("CAO_DEBUG_MODE"):
+        print(f"[DEBUG] 将发送到AI的命令: {command}")
+    
+    system_message = """你是一个命令行错误分析专家。
+请分析以下命令错误并提供解决方案。重要提示：你接收的命令是用户真实输入的，不要猜测他输入了其他命令。
+例如，如果错误显示命令未找到，请分析实际给出的命令，而不是猜测用户可能想输入的其他命令。"""
+
     user_message = f"""
 命令: {command}
 返回码: {returncode}
 错误信息:
 {error_text}
 
-请简洁地分析这个错误，并提供解决方案。
+请分析这个特定命令产生的错误，并提供准确的解决方案。避免猜测用户可能想要运行的其他命令，除非错误信息明确显示命令被系统解析为其他内容。
 """
 
     import requests
@@ -277,18 +325,34 @@ def print_with_borders(text: str):
             lines.append(line)
         else:
             # 长行分割
-            words = line.split(' ')
-            current_line = ''
-            for word in words:
-                # 计算当前行加上新单词后的显示宽度
-                test_line = current_line + (' ' if current_line else '') + word
-                if get_string_display_width(test_line) <= content_width:
-                    current_line = test_line
-                else:
+            # 对于中文文本，按字符分割会更好
+            is_cjk_text = any(ord(c) > 127 for c in line)
+            
+            if is_cjk_text:
+                # 中文文本按字符拆分
+                current_line = ''
+                for char in line:
+                    test_line = current_line + char
+                    if get_string_display_width(test_line) <= content_width:
+                        current_line = test_line
+                    else:
+                        lines.append(current_line)
+                        current_line = char
+                if current_line:
                     lines.append(current_line)
-                    current_line = word
-            if current_line:
-                lines.append(current_line)
+            else:
+                # 英文文本按单词拆分
+                words = line.split(' ')
+                current_line = ''
+                for word in words:
+                    test_line = current_line + (' ' if current_line else '') + word
+                    if get_string_display_width(test_line) <= content_width:
+                        current_line = test_line
+                    else:
+                        lines.append(current_line)
+                        current_line = word
+                if current_line:
+                    lines.append(current_line)
     
     # 计算边框宽度为内容宽度+2（两侧各1个空格）
     border_width = content_width + 2
@@ -321,17 +385,41 @@ def main():
     """主函数"""
     args = parse_args()
     
+    # 如果设置了调试标志，则设置环境变量以便在整个执行过程中使用
+    if args.debug:
+        os.environ["CAO_DEBUG_MODE"] = "1"
+    
     error_info = None
     
-    if args.last:
-        error_info = get_last_command_error()
-    elif args.number > 0:
-        error_info = get_command_by_number(args.number)
+    # 检查是否有预先执行的命令结果
+    bypass_command = os.environ.get("CAO_BYPASS_COMMAND")
+    bypass_error = os.environ.get("CAO_BYPASS_ERROR")
+    bypass_returncode = os.environ.get("CAO_BYPASS_RETURN_CODE")
+    
+    if bypass_command and bypass_error and bypass_returncode:
+        # 使用预先执行的命令结果
+        if args.debug:
+            print("\n--- 使用预执行的命令结果 ---")
+            print(f"命令: {bypass_command}")
+            print(f"返回码: {bypass_returncode}")
+            print(f"错误信息: {bypass_error}")
+            print("------------------------------\n")
+            
+        error_info = {
+            "command": bypass_command,
+            "original_command": bypass_command,
+            "error": bypass_error,
+            "returncode": int(bypass_returncode)
+        }
     elif args.command:
+        # 如果提供了命令参数，执行该命令
         error_info = execute_command(args.command)
+    elif args.number is not None:
+        # 如果提供了行号参数，获取指定行号的命令
+        error_info = get_command_by_number(args.number)
     else:
-        print("错误: 请提供要执行的命令，或使用 --last/-l 分析最后一个命令")
-        sys.exit(1)
+        # 默认分析最后一个命令
+        error_info = get_last_command_error()
     
     if isinstance(error_info, str):
         print(f"错误: {error_info}")
@@ -348,7 +436,8 @@ def main():
     # 调试模式打印错误信息
     if args.debug:
         print("\n--- 调试信息 ---")
-        print(f"命令: {error_info.get('command', '未知命令')}")
+        print(f"原始命令: {error_info.get('original_command', '未知命令')}")
+        print(f"解析命令: {error_info.get('command', '未知命令')}")
         print(f"返回码: {error_info.get('returncode', -1)}")
         print("错误信息:")
         print(error_info.get('error', '无错误信息'))
