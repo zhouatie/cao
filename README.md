@@ -89,6 +89,28 @@ cao --last
 cao -m openai -l
 ```
 
+## 本地调试
+
+# 创建虚拟环境
+
+python3 -m venv cao_venv
+
+# 激活虚拟环境
+
+source cao_venv/bin/activate
+
+# 在虚拟环境中安装开发版本（这会自动安装所有依赖项）
+
+pip install -e .
+
+# 现在您可以直接运行命令
+
+cao ls /nonexistent_directory
+
+# 完成测试后，退出虚拟环境
+
+deactivate
+
 ## 许可证
 
 [MIT](LICENSE)
