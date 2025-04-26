@@ -95,6 +95,9 @@ def get_last_command_error():
                 if last_cmd_proc.returncode == 0:
                     last_command = last_cmd_proc.stdout.strip()
             
+            if os.environ.get("CAO_DEBUG_MODE"):
+                print(f"[DEBUG] 获取到的最后执行命令: {last_command}")
+                
             # 使用 $? 获取上一条命令的返回码
             returncode_proc = subprocess.run(
                 'echo $?', 
@@ -105,8 +108,12 @@ def get_last_command_error():
             
             try:
                 returncode = int(returncode_proc.stdout.strip())
+                if os.environ.get("CAO_DEBUG_MODE"):
+                    print(f"[DEBUG] 命令返回码: {returncode}")
             except ValueError:
                 returncode = -1  # 默认值，表示未知返回码
+                if os.environ.get("CAO_DEBUG_MODE"):
+                    print(f"[DEBUG] 无法解析返回码，使用默认值: {returncode}")
                 
             # 获取上次命令的错误输出通常需要特殊处理
             # 不过我们可以尝试用干净的方式获取错误信息
@@ -117,6 +124,7 @@ def get_last_command_error():
                 # 使用环境变量标记，告诉子进程这是一次错误重现
                 os.environ["CAO_REPRODUCING_ERROR"] = "1"
                 
+                # 对于涉及特殊字符的命令（如中文路径），直接使用shell执行可能更可靠
                 error_proc = subprocess.run(
                     last_command,
                     shell=True,
@@ -127,6 +135,10 @@ def get_last_command_error():
                 
                 error_text = error_proc.stderr or error_proc.stdout
                 actual_returncode = error_proc.returncode
+                
+                if os.environ.get("CAO_DEBUG_MODE"):
+                    print(f"[DEBUG] 重现命令错误: {error_text}")
+                    print(f"[DEBUG] 重现命令返回码: {actual_returncode}")
                 
                 # 如果重现的错误返回码与原始返回码一致，则使用重现的错误信息
                 if actual_returncode == returncode:
@@ -474,9 +486,12 @@ def main():
     bypass_returncode = os.environ.get("CAO_BYPASS_RETURN_CODE")
     
     # 检查测试文件（用于调试和测试）
+    # 优先检查示例文件，如果存在则采用，这样用户可以主动创建测试文件
     test_command_file = "test_command.txt"
     test_error_file = "test_error.txt"
     test_returncode_file = "test_returncode.txt"
+    
+    # 只有当所有测试文件都存在时才使用它们
     if os.path.exists(test_command_file) and os.path.exists(test_error_file) and os.path.exists(test_returncode_file):
         try:
             with open(test_command_file, 'r') as f:
