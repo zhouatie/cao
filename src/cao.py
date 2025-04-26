@@ -19,7 +19,7 @@ import re
 
 # 支持的 AI 模型
 SUPPORTED_MODELS = {
-    "deepseek": {"api_base": "https://api.deepseek.com/v1", "model": "deepseek-chat"},
+    "deepseek": {"api_base": "https://api.deepseek.com/v1", "model": "deepseek-coder"},
     "openai": {"api_base": "https://api.openai.com/v1", "model": "gpt-4o"},
     "ollama": {"api_base": "http://localhost:11434/v1", "model": "qwen2.5-coder:7b"},
 }
