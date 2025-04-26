@@ -254,42 +254,68 @@ def call_ai_api(model_config: Dict, error_info: Dict) -> str:
     except Exception as e:
         return f"调用 AI API 时出错: {str(e)}"
 
+def get_string_display_width(s: str) -> int:
+    """获取字符串在终端中的显示宽度，考虑中文等宽字符"""
+    width = 0
+    for char in s:
+        # 中文字符、日文、韩文等宽字符通常显示宽度为2
+        if ord(char) > 127:
+            width += 2
+        else:
+            width += 1
+    return width
+
 def print_with_borders(text: str):
     """打印带边框的文本"""
     terminal_width, _ = get_terminal_size()
-    width = min(terminal_width - 4, 100)  # 最大宽度限制
+    content_width = min(terminal_width - 4, 100)  # 最大内容宽度限制
     
     # 处理文本换行
     lines = []
     for line in text.split('\n'):
-        if len(line) <= width:
+        if get_string_display_width(line) <= content_width:
             lines.append(line)
         else:
             # 长行分割
             words = line.split(' ')
             current_line = ''
             for word in words:
-                if len(current_line) + len(word) + 1 <= width:
-                    if current_line:
-                        current_line += ' ' + word
-                    else:
-                        current_line = word
+                # 计算当前行加上新单词后的显示宽度
+                test_line = current_line + (' ' if current_line else '') + word
+                if get_string_display_width(test_line) <= content_width:
+                    current_line = test_line
                 else:
                     lines.append(current_line)
                     current_line = word
             if current_line:
                 lines.append(current_line)
     
-    # 打印带边框的文本
-    print('╭' + '─' * (width + 2) + '╮')
-    print('│ \033[1;36mAI 分析结果\033[0m' + ' ' * (width - 9) + ' │')
-    print('├' + '─' * (width + 2) + '┤')
+    # 计算边框宽度为内容宽度+2（两侧各1个空格）
+    border_width = content_width + 2
     
+    # 打印上边框
+    print('╭' + '─' * border_width + '╮')
+    
+    # 打印标题行
+    title = "\033[1;36mAI 分析结果\033[0m"
+    # 计算标题文本的实际显示宽度（不包括ANSI转义序列）
+    title_display_width = get_string_display_width("AI 分析结果")
+    # 计算需要的填充空格数量
+    padding = ' ' * (content_width - title_display_width)
+    print('│ ' + title + padding + ' │')
+    
+    # 打印分隔线
+    print('├' + '─' * border_width + '┤')
+    
+    # 打印内容行
     for line in lines:
-        padding = ' ' * (width - len(line))
+        # 计算填充空格，考虑显示宽度而不是字符数
+        display_width = get_string_display_width(line)
+        padding = ' ' * (content_width - display_width)
         print('│ ' + line + padding + ' │')
     
-    print('╰' + '─' * (width + 2) + '╯')
+    # 打印下边框
+    print('╰' + '─' * border_width + '╯')
 
 def main():
     """主函数"""
