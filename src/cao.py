@@ -478,12 +478,11 @@ def main():
         print(f"命令 '{error_info.get('command')}' 执行成功，没有错误。")
         sys.exit(0)
 
-    print(f"最后一次命令: {error_info.get('command', '未知命令')}")
-
     # 调试模式打印错误信息
     if args.debug:
         print("\n--- 调试信息 ---")
         print(f"原始命令: {error_info.get('original_command', '未知命令')}")
+        print(f"解析命令: {error_info.get('command', '未知命令')}")
         print(f"返回码: {error_info.get('returncode', -1)}")
         print("错误信息:")
         print(error_info.get("error", "无错误信息"))
@@ -499,7 +498,9 @@ def main():
     model_config = SUPPORTED_MODELS[model_name]
 
     # 调用 AI API
+    print()
     print(f"正在使用 {model_name} 分析错误...")
+    print()
     ai_response = call_ai_api(model_config, error_info)
 
     # 打印 AI 响应
