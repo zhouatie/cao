@@ -69,10 +69,90 @@ def get_shell_history_file() -> str:
 
 def get_last_command_error():
     """获取最后一个命令的错误输出"""
-    history_file = get_shell_history_file()
-    shell = os.environ.get('SHELL', '')
+    # 尝试使用各种方法获取上一条命令及其错误
     
+    # 方法一：通过 fc -ln -1 获取最后执行的命令
     try:
+        # 获取最后执行的命令
+        last_cmd_proc = subprocess.run(
+            'fc -ln -1', 
+            shell=True, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        if last_cmd_proc.returncode == 0 and last_cmd_proc.stdout.strip():
+            last_command = last_cmd_proc.stdout.strip()
+            # 过滤掉可能的 cao 自身命令
+            if last_command.startswith('cao'):
+                # 获取倒数第二条命令
+                last_cmd_proc = subprocess.run(
+                    'fc -ln -2 -1 | head -1', 
+                    shell=True, 
+                    stdout=subprocess.PIPE,
+                    text=True
+                )
+                if last_cmd_proc.returncode == 0:
+                    last_command = last_cmd_proc.stdout.strip()
+            
+            # 使用 $? 获取上一条命令的返回码
+            returncode_proc = subprocess.run(
+                'echo $?', 
+                shell=True, 
+                stdout=subprocess.PIPE,
+                text=True
+            )
+            
+            try:
+                returncode = int(returncode_proc.stdout.strip())
+            except ValueError:
+                returncode = -1  # 默认值，表示未知返回码
+                
+            # 获取上次命令的错误输出通常需要特殊处理
+            # 不过我们可以尝试用干净的方式获取错误信息
+            
+            # 如果返回码不是0，尝试重新执行这条命令来获取错误
+            if returncode != 0:
+                # 注意：这里只是为了获取错误信息，可能会有副作用
+                # 使用环境变量标记，告诉子进程这是一次错误重现
+                os.environ["CAO_REPRODUCING_ERROR"] = "1"
+                
+                error_proc = subprocess.run(
+                    last_command,
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True
+                )
+                
+                error_text = error_proc.stderr or error_proc.stdout
+                actual_returncode = error_proc.returncode
+                
+                # 如果重现的错误返回码与原始返回码一致，则使用重现的错误信息
+                if actual_returncode == returncode:
+                    return {
+                        "command": last_command,
+                        "error": error_text,
+                        "returncode": returncode,
+                        "original_command": last_command
+                    }
+                
+            # 如果无法通过重现获取准确的错误信息，至少返回命令和返回码
+            return {
+                "command": last_command,
+                "error": f"无法获取原始错误信息。命令返回码为 {returncode}。",
+                "returncode": returncode,
+                "original_command": last_command
+            }
+    except Exception as e:
+        if os.environ.get("CAO_DEBUG_MODE"):
+            print(f"[DEBUG] 使用fc方法获取历史命令失败: {str(e)}")
+    
+    # 方法二：回退到直接读取历史文件（不太可靠，但作为备选）
+    try:
+        history_file = get_shell_history_file()
+        shell = os.environ.get('SHELL', '')
+        
         with open(history_file, 'r', encoding='utf-8', errors='ignore') as f:
             history = f.readlines()
             
@@ -80,15 +160,20 @@ def get_last_command_error():
             return "未找到历史命令"
         
         # 获取最后一条命令（根据不同 shell 格式处理）
-        last_command = history[-1].strip()
+        last_entry = history[-1].strip()
         
         if 'zsh' in shell:
             # zsh 历史记录格式: ": timestamp:0;command"
-            match = re.search(r';\s*(.*?)$', last_command)
+            match = re.search(r';\s*(.*?)$', last_entry)
             if match:
                 last_command = match.group(1)
-        
-        # 使用Popen执行命令
+            else:
+                last_command = last_entry
+        else:
+            last_command = last_entry
+            
+        # 尝试执行命令以获取可能的错误（注意：这可能有副作用）
+        os.environ["CAO_REPRODUCING_ERROR"] = "1"
         process = subprocess.Popen(
             last_command,
             shell=True,
@@ -99,20 +184,12 @@ def get_last_command_error():
         stdout, stderr = process.communicate()
         returncode = process.returncode
         
-        if returncode != 0:
-            return {
-                "command": last_command,
-                "error": stderr or stdout,
-                "returncode": returncode,
-                "original_command": last_command  # 保存完整的原始命令
-            }
-        else:
-            return {
-                "command": last_command,
-                "message": "这个命令执行成功，没有错误",
-                "returncode": 0,
-                "original_command": last_command  # 保存完整的原始命令
-            }
+        return {
+            "command": last_command,
+            "error": stderr or stdout,
+            "returncode": returncode,
+            "original_command": last_command
+        }
             
     except Exception as e:
         return f"获取最后命令时出错: {str(e)}"
@@ -396,7 +473,37 @@ def main():
     bypass_error = os.environ.get("CAO_BYPASS_ERROR")
     bypass_returncode = os.environ.get("CAO_BYPASS_RETURN_CODE")
     
-    if bypass_command and bypass_error and bypass_returncode:
+    # 检查测试文件（用于调试和测试）
+    test_command_file = "test_command.txt"
+    test_error_file = "test_error.txt"
+    test_returncode_file = "test_returncode.txt"
+    if os.path.exists(test_command_file) and os.path.exists(test_error_file) and os.path.exists(test_returncode_file):
+        try:
+            with open(test_command_file, 'r') as f:
+                test_command = f.read().strip()
+            with open(test_error_file, 'r') as f:
+                test_error = f.read().strip()
+            with open(test_returncode_file, 'r') as f:
+                test_returncode = int(f.read().strip())
+                
+            # 使用测试文件中的命令和错误
+            if args.debug:
+                print("\n--- 使用测试文件的命令结果 ---")
+                print(f"命令: {test_command}")
+                print(f"返回码: {test_returncode}")
+                print(f"错误信息: {test_error}")
+                print("------------------------------\n")
+                
+            error_info = {
+                "command": test_command,
+                "original_command": test_command,
+                "error": test_error,
+                "returncode": test_returncode
+            }
+        except Exception as e:
+            if args.debug:
+                print(f"[DEBUG] 读取测试文件时出错: {str(e)}")
+    elif bypass_command and bypass_error and bypass_returncode:
         # 使用预先执行的命令结果
         if args.debug:
             print("\n--- 使用预执行的命令结果 ---")
