@@ -11,11 +11,24 @@
 
 ## 安装
 
+### 通过 pipx 安装 (推荐)
+
+```bash
+pipx install cao
+```
+
+pipx 会自动创建一个独立的虚拟环境来安装 cao，避免依赖冲突。
+
+### 通过 pip 安装
+
+```bash
+pip install cao
+```
+
 ### 通过 Homebrew 安装
 
 ```bash
-brew tap zhouatie/cao
-brew install cao
+brew install zhouatie/cao/cao
 ```
 
 ## 使用方法
@@ -29,8 +42,14 @@ function cao() {
   local last_cmd=$(fc -ln -1 | sed -e 's/^ *//')
   local last_code=$?
 
-  if command -v cao >/dev/null 2>&1; then
-    CAO_LAST_COMMAND="$last_cmd" CAO_RETURN_CODE="$last_code" cao "$@"
+  # Use the full path to the cao executable to avoid recursion
+  if command -v /Users/zhoushitie/.local/bin/cao >/dev/null 2>&1; then
+    CAO_LAST_COMMAND="$last_cmd" CAO_RETURN_CODE="$last_code" /Users/zhoushitie/.local/bin/cao "$@"
+  elif command -v /usr/local/bin/cao >/dev/null 2>&1; then
+    CAO_LAST_COMMAND="$last_cmd" CAO_RETURN_CODE="$last_code" /usr/local/bin/cao "$@"
+  else
+    echo "cao executable not found"
+    return 1
   fi
 }
 ```
@@ -113,6 +132,24 @@ cao ls /nonexistent_directory
 
 # 完成测试后，退出虚拟环境
 deactivate
+```
+
+## 使用 pipx 开发
+
+在开发过程中，可以使用 pipx 来测试你的包：
+
+```bash
+# 安装开发版本
+pipx install --spec . cao
+
+# 更新开发版本
+pipx reinstall cao
+
+# 查看安装的包
+pipx list
+
+# 卸载
+pipx uninstall cao
 ```
 
 ## 许可证
