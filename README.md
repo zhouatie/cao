@@ -1,4 +1,4 @@
-# cao(🌿)
+# cao🌿
 
 一个命令行工具，用于捕获终端错误并使用 AI 进行分析和提供解决方案。
 
@@ -9,31 +9,23 @@
 -   分析最近执行的命令错误
 -   分析特定历史命令错误
 
+## 系统要求
+
+-   Python
+
 ## 安装
 
-### 通过 pipx 安装 (推荐)
-
-```bash
-pipx install cao
-```
+### 通过 pipx 安装(没有的话，可以用 brew 安装下)
 
 pipx 会自动创建一个独立的虚拟环境来安装 cao，避免依赖冲突。
 
-### 通过 pip 安装
-
 ```bash
-pip install cao
-```
-
-### 通过 Homebrew 安装
-
-```bash
-brew install zhouatie/cao/cao
+pipx install zhouatie-cao
 ```
 
 ## 使用方法
 
-### 设置 shell 函数（推荐）
+### 设置 shell 函数
 
 为了更好地捕获最近执行的命令及其返回码，建议在您的 shell 配置文件（如 `.zshrc` 或 `.bashrc`）中添加以下函数：
 
@@ -43,8 +35,8 @@ function cao() {
   local last_code=$?
 
   # Use the full path to the cao executable to avoid recursion
-  if command -v /Users/zhoushitie/.local/bin/cao >/dev/null 2>&1; then
-    CAO_LAST_COMMAND="$last_cmd" CAO_RETURN_CODE="$last_code" /Users/zhoushitie/.local/bin/cao "$@"
+  if command -v ~/.local/bin/cao >/dev/null 2>&1; then
+    CAO_LAST_COMMAND="$last_cmd" CAO_RETURN_CODE="$last_code" ~/.local/bin/cao "$@"
   elif command -v /usr/local/bin/cao >/dev/null 2>&1; then
     CAO_LAST_COMMAND="$last_cmd" CAO_RETURN_CODE="$last_code" /usr/local/bin/cao "$@"
   else
@@ -151,6 +143,10 @@ pipx list
 # 卸载
 pipx uninstall cao
 ```
+
+## FEATURE
+
+-   [ ] 支持与持续性对话
 
 ## 许可证
 
