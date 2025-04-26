@@ -40,3 +40,7 @@ venv.bak/
 .DS_Store
 .AppleDouble
 .LSOverride
+
+test_command.txt
+test_error.txt
+test_returncode.txt
