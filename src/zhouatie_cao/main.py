@@ -502,7 +502,7 @@ def main():
     model_config = SUPPORTED_MODELS[model_name]
 
     # 调用 AI API
-    print()
+    print("\ncao🌿\n")
     print(f"正在使用 {model_name} 分析错误...")
     print()
     ai_response = call_ai_api(model_config, error_info)
