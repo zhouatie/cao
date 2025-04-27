@@ -100,7 +100,7 @@ def get_last_command_error():
                         shell=True,
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
-                        text=True,
+                        universal_newlines=True,  # 兼容 Python 3.6 及更早版本
                         timeout=20,  # 设置子进程超时为 20 秒
                     )
 
@@ -188,7 +188,7 @@ def get_command_by_number(number: int):
             shell=True,
             stderr=subprocess.PIPE,
             stdout=subprocess.PIPE,
-            text=True,
+            universal_newlines=True,  # 兼容 Python 3.6 及更早版本
         )
         stdout, stderr = process.communicate()
         returncode = process.returncode
@@ -219,7 +219,11 @@ def execute_command(command: List[str]):
 
     try:
         process = subprocess.Popen(
-            cmd, shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE, text=True
+            cmd,
+            shell=True,
+            stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            universal_newlines=True,  # 兼容 Python 3.6 及更早版本
         )
         stdout, stderr = process.communicate()
         returncode = process.returncode
