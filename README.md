@@ -146,7 +146,7 @@ pipx uninstall cao
 
 ## FEATURE
 
--   [ ] 支持与持续性对话
+-   [ ] 支持与ai持续性对话
 
 ## 许可证
 
