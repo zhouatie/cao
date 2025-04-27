@@ -11,11 +11,22 @@ import sys
 import subprocess
 import json
 from typing import Dict, List, Optional, Union
-import fcntl
-import termios
-import struct
 import time
 import re
+
+# 根据平台导入不同的模块
+import platform
+
+_IS_WINDOWS = platform.system() == "Windows"
+
+# 在非Windows平台上导入Unix特定的模块
+if not _IS_WINDOWS:
+    try:
+        import fcntl
+        import termios
+        import struct
+    except ImportError:
+        pass
 
 # 支持的 AI 模型
 SUPPORTED_MODELS = {
@@ -29,13 +40,32 @@ DEFAULT_MODEL = "deepseek"
 
 def get_terminal_size():
     """获取终端窗口大小"""
-    try:
-        h, w, hp, wp = struct.unpack(
-            "HHHH", fcntl.ioctl(0, termios.TIOCGWINSZ, struct.pack("HHHH", 0, 0, 0, 0))
-        )
-        return w, h
-    except:
-        return 80, 24  # 默认大小
+    if _IS_WINDOWS:
+        # Windows 平台使用 os.get_terminal_size
+        try:
+            from os import get_terminal_size as os_get_terminal_size
+
+            size = os_get_terminal_size()
+            return size.columns, size.lines
+        except:
+            return 80, 24  # 默认大小
+    else:
+        # Unix 平台使用 fcntl
+        try:
+            # 在函数内部进行导入，以确保这些模块只在需要时被访问
+            import struct
+            import fcntl
+            import termios
+
+            # 只使用我们需要的变量，忽略不需要的变量
+            h, w, _, _ = struct.unpack(
+                "HHHH",
+                fcntl.ioctl(0, termios.TIOCGWINSZ, struct.pack("HHHH", 0, 0, 0, 0)),
+            )
+            return w, h
+        except Exception:
+            # 如果发生任何错误（包括模块不可用），返回默认值
+            return 80, 24  # 默认大小
 
 
 def parse_args():
