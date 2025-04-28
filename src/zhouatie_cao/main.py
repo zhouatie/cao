@@ -28,14 +28,12 @@ if not _IS_WINDOWS:
     except ImportError:
         pass
 
-# 支持的 AI 模型
-SUPPORTED_MODELS = {
-    "deepseek": {"api_base": "https://api.deepseek.com/v1", "model": "deepseek-coder"},
-    "openai": {"api_base": "https://api.openai.com/v1", "model": "gpt-4o"},
-    "ollama": {"api_base": "http://localhost:11434/v1", "model": "qwen2.5-coder:7b"},
-}
+# 导入配置管理模块
+from . import config
 
-DEFAULT_MODEL = "deepseek"
+# 获取用户配置的模型
+SUPPORTED_MODELS = config.get_supported_models()
+DEFAULT_MODEL = config.get_default_model()
 
 
 def get_terminal_size():
@@ -80,6 +78,7 @@ def parse_args():
     )
     parser.add_argument("-n", "--number", type=int, help="分析历史记录中特定行号的错误")
     parser.add_argument("-d", "--debug", action="store_true", help="开启调试模式")
+    parser.add_argument("--config", action="store_true", help="配置 AI 模型")
     parser.add_argument("command", nargs="*", help="要执行的命令 (如果提供)")
 
     return parser.parse_args()
@@ -452,6 +451,12 @@ def print_with_borders(text: str):
 def main():
     """主函数"""
     args = parse_args()
+
+    # 如果用户请求配置，则运行配置界面
+    if args.config:
+        from . import config_cli
+        config_cli.interactive_config()
+        sys.exit(0)
 
     # 如果设置了调试标志，则设置环境变量以便在整个执行过程中使用
     if args.debug:
