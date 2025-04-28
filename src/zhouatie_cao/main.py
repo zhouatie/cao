@@ -119,10 +119,10 @@ def get_last_command_error():
                     "returncode": -1,
                     "original_command": env_command,
                 }
-            
+
             # 设置环境变量标记错误重现
             os.environ["CAO_REPRODUCING_ERROR"] = "1"
-            
+
             # 添加 10s 超时机制
             import threading
             import time
@@ -308,39 +308,30 @@ def call_ai_api(model_config: Dict, error_info: Dict) -> str:
             api_provider = "mistral"
         elif "cohere" in api_base:
             api_provider = "cohere"
+        elif "dashscope" in api_base:
+            api_provider = "dashscope"
 
-    # 根据提供商获取API密钥
-    if api_provider == "ollama":
-        # Ollama本地模型不需要API key
+    # 检查是否为不需要API密钥的本地模型
+    if api_provider == "ollama" or "localhost" in api_base or "127.0.0.1" in api_base:
+        # 本地模型不需要API key
         api_key = None
-    elif api_provider == "openai":
-        api_key = os.environ.get("OPENAI_API_KEY")
-        if not api_key:
-            return "错误: 未设置 OPENAI_API_KEY 环境变量"
-    elif api_provider == "deepseek":
-        api_key = os.environ.get("DEEPSEEK_API_KEY")
-        if not api_key:
-            return "错误: 未设置 DEEPSEEK_API_KEY 环境变量"
-    elif api_provider == "anthropic":
-        api_key = os.environ.get("ANTHROPIC_API_KEY")
-        if not api_key:
-            return "错误: 未设置 ANTHROPIC_API_KEY 环境变量"
-    elif api_provider == "mistral":
-        api_key = os.environ.get("MISTRAL_API_KEY")
-        if not api_key:
-            return "错误: 未设置 MISTRAL_API_KEY 环境变量"
-    elif api_provider == "cohere":
-        api_key = os.environ.get("COHERE_API_KEY")
-        if not api_key:
-            return "错误: 未设置 COHERE_API_KEY 环境变量"
     elif api_provider:
-        # 自定义提供商，尝试获取对应的API密钥
+        # 任何其他提供商，统一从环境变量获取API密钥
         env_var_name = f"{api_provider.upper()}_API_KEY"
         api_key = os.environ.get(env_var_name)
+
+        if os.environ.get("CAO_DEBUG_MODE"):
+            print(f"尝试从环境变量获取API密钥: {env_var_name}")
+            print(f"API提供商: {api_provider}")
+
+        # 尝试从配置中获取API密钥
+        if not api_key and "api_key" in model_config:
+            api_key = model_config["api_key"]
+
         if not api_key:
-            return f"错误: 未设置 {env_var_name} 环境变量"
+            return f"错误: 未设置 {env_var_name} 环境变量，也未在配置中提供API密钥"
     else:
-        return f"错误: 不支持的 API 基础 URL: {api_base}"
+        return f"错误: 无法确定API提供商，请在配置中指定provider字段或使用标准URL格式"
 
     api_base = model_config["api_base"]
     model = model_config["model"]
