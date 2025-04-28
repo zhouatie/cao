@@ -280,22 +280,59 @@ def call_ai_api(model_config: Dict, error_info: Dict) -> str:
     """调用 AI API 分析错误"""
     # 根据选择的模型获取对应的 API KEY
     # 针对不同的 API 获取对应的 API KEY
-    if (
-        "localhost" in model_config["api_base"]
-        or "127.0.0.1" in model_config["api_base"]
-    ):
-        # 本地运行的 Ollama 模型不需要 API key
+
+    # 处理不同的API提供商
+    api_key = None
+    api_provider = model_config.get("provider", "").lower()  # 优先使用provider字段
+    api_base = model_config["api_base"]
+
+    # 如果未指定provider，尝试从api_base推断
+    if not api_provider:
+        if "localhost" in api_base or "127.0.0.1" in api_base:
+            api_provider = "ollama"
+        elif "openai" in api_base:
+            api_provider = "openai"
+        elif "deepseek" in api_base:
+            api_provider = "deepseek"
+        elif "anthropic" in api_base:
+            api_provider = "anthropic"
+        elif "mistral" in api_base:
+            api_provider = "mistral"
+        elif "cohere" in api_base:
+            api_provider = "cohere"
+
+    # 根据提供商获取API密钥
+    if api_provider == "ollama":
+        # Ollama本地模型不需要API key
         api_key = None
-    elif "openai" in model_config["api_base"]:
+    elif api_provider == "openai":
         api_key = os.environ.get("OPENAI_API_KEY")
         if not api_key:
             return "错误: 未设置 OPENAI_API_KEY 环境变量"
-    elif "deepseek" in model_config["api_base"]:
+    elif api_provider == "deepseek":
         api_key = os.environ.get("DEEPSEEK_API_KEY")
         if not api_key:
             return "错误: 未设置 DEEPSEEK_API_KEY 环境变量"
+    elif api_provider == "anthropic":
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            return "错误: 未设置 ANTHROPIC_API_KEY 环境变量"
+    elif api_provider == "mistral":
+        api_key = os.environ.get("MISTRAL_API_KEY")
+        if not api_key:
+            return "错误: 未设置 MISTRAL_API_KEY 环境变量"
+    elif api_provider == "cohere":
+        api_key = os.environ.get("COHERE_API_KEY")
+        if not api_key:
+            return "错误: 未设置 COHERE_API_KEY 环境变量"
+    elif api_provider:
+        # 自定义提供商，尝试获取对应的API密钥
+        env_var_name = f"{api_provider.upper()}_API_KEY"
+        api_key = os.environ.get(env_var_name)
+        if not api_key:
+            return f"错误: 未设置 {env_var_name} 环境变量"
     else:
-        return f"错误: 不支持的 API 基础 URL: {model_config['api_base']}"
+        return f"错误: 不支持的 API 基础 URL: {api_base}"
 
     api_base = model_config["api_base"]
     model = model_config["model"]
@@ -455,6 +492,7 @@ def main():
     # 如果用户请求配置，则运行配置界面
     if args.config:
         from . import config_cli
+
         config_cli.interactive_config()
         sys.exit(0)
 

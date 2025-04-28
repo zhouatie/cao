@@ -75,6 +75,10 @@ cao -m deepseek your_command_here
 -   ollama (本地运行)
 -   deepseek (默认)
 -   openai
+-   anthropic
+-   mistral
+-   cohere
+-   以及其他通过配置添加的自定义模型
 
 ### 配置 AI 模型
 
@@ -100,6 +104,10 @@ cao -d your_command_here
 
 -   `OPENAI_API_KEY` - 使用 OpenAI 模型时需要
 -   `DEEPSEEK_API_KEY` - 使用 DeepSeek 模型时需要
+-   `ANTHROPIC_API_KEY` - 使用 Anthropic 模型时需要
+-   `MISTRAL_API_KEY` - 使用 Mistral 模型时需要
+-   `COHERE_API_KEY` - 使用 Cohere 模型时需要
+-   其他自定义模型需设置相应的环境变量，命名规则为 `<PROVIDER名称大写>_API_KEY`
 
 注意：使用 Ollama 模型时不需要设置 API Key，因为它在本地运行。
 
