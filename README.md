@@ -75,10 +75,12 @@ cao -m deepseek your_command_here
 -   ollama (本地运行)
 -   deepseek (默认)
 -   openai
--   anthropic
--   mistral
--   cohere
--   以及其他通过配置添加的自定义模型
+-   以及任何支持OpenAI兼容API的模型，如:
+    -   anthropic
+    -   mistral
+    -   cohere
+    -   dashscope(阿里云)
+    -   等更多通过自定义配置添加的模型
 
 ### 配置 AI 模型
 
@@ -98,18 +100,26 @@ cao --config
 cao -d your_command_here
 ```
 
-## 环境变量
+## 环境变量和API密钥
 
-需要设置以下环境变量（取决于您使用的AI模型）:
+设置API密钥的两种方式:
 
--   `OPENAI_API_KEY` - 使用 OpenAI 模型时需要
--   `DEEPSEEK_API_KEY` - 使用 DeepSeek 模型时需要
--   `ANTHROPIC_API_KEY` - 使用 Anthropic 模型时需要
--   `MISTRAL_API_KEY` - 使用 Mistral 模型时需要
--   `COHERE_API_KEY` - 使用 Cohere 模型时需要
--   其他自定义模型需设置相应的环境变量，命名规则为 `<PROVIDER名称大写>_API_KEY`
+1. **环境变量** (推荐):
+   - 自动根据API提供商命名规则使用相应环境变量
+   - 命名规则: `<PROVIDER名称大写>_API_KEY`
+   - 举例:
+     - `OPENAI_API_KEY` - OpenAI模型
+     - `DEEPSEEK_API_KEY` - DeepSeek模型
+     - `DASHSCOPE_API_KEY` - 阿里云DashScope模型
+     - `ANTHROPIC_API_KEY` - Anthropic模型
 
-注意：使用 Ollama 模型时不需要设置 API Key，因为它在本地运行。
+2. **配置文件**:
+   - 通过`cao --config`命令进行配置
+   - 支持在配置中直接设置API密钥
+
+注意：
+- 使用Ollama模型不需要设置API密钥，因为它在本地运行
+- API提供商名称会自动从API基础URL中提取，例如`api.openai.com` → 使用`OPENAI_API_KEY`
 
 ## 示例
 
