@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="zhouatie-cao",
-    version="1.0.6",
+    version="1.0.7",
     description="一个捕获终端错误并使用 AI 分析的命令行工具",
     author="zhouatie",
     author_email="zhouatie@gmail.com",
