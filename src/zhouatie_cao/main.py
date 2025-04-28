@@ -296,20 +296,42 @@ def call_ai_api(model_config: Dict, error_info: Dict) -> str:
 
     # 如果未指定provider，尝试从api_base推断
     if not api_provider:
+        # 检查本地模型
         if "localhost" in api_base or "127.0.0.1" in api_base:
             api_provider = "ollama"
-        elif "openai" in api_base:
-            api_provider = "openai"
-        elif "deepseek" in api_base:
-            api_provider = "deepseek"
-        elif "anthropic" in api_base:
-            api_provider = "anthropic"
-        elif "mistral" in api_base:
-            api_provider = "mistral"
-        elif "cohere" in api_base:
-            api_provider = "cohere"
-        elif "dashscope" in api_base:
-            api_provider = "dashscope"
+        else:
+            # 从URL中提取可能的提供商名称
+            # 移除了硬编码的提供商检测，改为从URL中提取域名部分作为提供商名称
+            import re
+            from urllib.parse import urlparse
+            
+            parsed_url = urlparse(api_base)
+            domain = parsed_url.netloc
+            
+            # 如果域名包含端口，去掉端口
+            if ":" in domain:
+                domain = domain.split(":")[0]
+                
+            # 提取域名中的主要部分，如 api.openai.com -> openai
+            domain_parts = domain.split(".")
+            if len(domain_parts) >= 2:
+                # 尝试找到主域名部分
+                if domain_parts[-2] not in ["com", "org", "net", "io"]:
+                    api_provider = domain_parts[-2]
+                else:
+                    # 如果是二级域名，尝试获取子域名部分
+                    if len(domain_parts) > 2:
+                        api_provider = domain_parts[-3]
+            
+            # 如果无法从域名提取，尝试从路径中提取
+            if not api_provider and parsed_url.path:
+                path_parts = parsed_url.path.strip('/').split('/')
+                if path_parts and path_parts[0] not in ["v1", "v2", "v3", "api"]:
+                    api_provider = path_parts[0]
+            
+            # 如果仍然无法确定提供商，使用完整域名
+            if not api_provider:
+                api_provider = domain.replace(".", "_")
 
     # 检查是否为不需要API密钥的本地模型
     if api_provider == "ollama" or "localhost" in api_base or "127.0.0.1" in api_base:
@@ -327,6 +349,22 @@ def call_ai_api(model_config: Dict, error_info: Dict) -> str:
         # 尝试从配置中获取API密钥
         if not api_key and "api_key" in model_config:
             api_key = model_config["api_key"]
+            
+        # 如果存在兼容性标识符（如dashscope通过compatible-mode提供的OpenAI兼容接口）
+        if not api_key and "compatible-mode" in api_base:
+            # 从URL中提取实际提供商名称
+            compat_provider = None
+            if "dashscope" in api_base:
+                compat_provider = "DASHSCOPE"
+            elif "baichuan" in api_base:
+                compat_provider = "BAICHUAN"
+            
+            if compat_provider:
+                compat_env_var = f"{compat_provider}_API_KEY"
+                api_key = os.environ.get(compat_env_var)
+                
+                if os.environ.get("CAO_DEBUG_MODE") and api_key:
+                    print(f"从兼容模式环境变量获取API密钥: {compat_env_var}")
 
         if not api_key:
             return f"错误: 未设置 {env_var_name} 环境变量，也未在配置中提供API密钥"
