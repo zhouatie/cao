@@ -376,6 +376,10 @@ def call_ai_api(model_config: Dict, error_info: Dict) -> str:
     }
 
     try:
+        # debug 模式下打印请求的 payload
+        if os.environ.get("CAO_DEBUG_MODE"):
+            print(f"[DEBUG] 请求的 payload: {json.dumps(payload, indent=2)}")
+
         response = requests.post(
             f"{api_base}/chat/completions", headers=headers, json=payload, timeout=30
         )
