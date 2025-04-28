@@ -76,6 +76,18 @@ cao -m deepseek your_command_here
 -   deepseek (默认)
 -   openai
 
+### 配置 AI 模型
+
+```bash
+cao --config
+```
+
+这将启动交互式配置界面，您可以在其中:
+- 添加/更新模型配置
+- 删除不需要的模型
+- 设置默认模型
+- 查看当前配置的所有模型
+
 ### 开启调试模式
 
 ```bash
@@ -146,6 +158,7 @@ pipx uninstall cao
 
 ## FEATURE
 
+-   [x] 自定义配置 AI 模型
 -   [ ] 支持与ai持续性对话
 
 ## 许可证
