@@ -111,10 +111,18 @@ def get_last_command_error():
                 print(f"[DEBUG] 从环境变量获取命令: {env_command}")
                 print(f"[DEBUG] 从环境变量获取返回码: {returncode}")
 
-            # 无论返回码如何，都尝试重新执行这条命令来获取输出
+            # 检查是否已经在错误重现模式，避免递归执行
+            if os.environ.get("CAO_REPRODUCING_ERROR"):
+                return {
+                    "command": env_command,
+                    "error": "检测到递归执行cao，避免执行命令以防止进程爆炸",
+                    "returncode": -1,
+                    "original_command": env_command,
+                }
+            
             # 设置环境变量标记错误重现
             os.environ["CAO_REPRODUCING_ERROR"] = "1"
-
+            
             # 添加 10s 超时机制
             import threading
             import time
