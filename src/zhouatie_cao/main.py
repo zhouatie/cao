@@ -304,14 +304,14 @@ def call_ai_api(model_config: Dict, error_info: Dict) -> str:
             # 移除了硬编码的提供商检测，改为从URL中提取域名部分作为提供商名称
             import re
             from urllib.parse import urlparse
-            
+
             parsed_url = urlparse(api_base)
             domain = parsed_url.netloc
-            
+
             # 如果域名包含端口，去掉端口
             if ":" in domain:
                 domain = domain.split(":")[0]
-                
+
             # 提取域名中的主要部分，如 api.openai.com -> openai
             domain_parts = domain.split(".")
             if len(domain_parts) >= 2:
@@ -322,13 +322,13 @@ def call_ai_api(model_config: Dict, error_info: Dict) -> str:
                     # 如果是二级域名，尝试获取子域名部分
                     if len(domain_parts) > 2:
                         api_provider = domain_parts[-3]
-            
+
             # 如果无法从域名提取，尝试从路径中提取
             if not api_provider and parsed_url.path:
-                path_parts = parsed_url.path.strip('/').split('/')
+                path_parts = parsed_url.path.strip("/").split("/")
                 if path_parts and path_parts[0] not in ["v1", "v2", "v3", "api"]:
                     api_provider = path_parts[0]
-            
+
             # 如果仍然无法确定提供商，使用完整域名
             if not api_provider:
                 api_provider = domain.replace(".", "_")
@@ -349,7 +349,7 @@ def call_ai_api(model_config: Dict, error_info: Dict) -> str:
         # 尝试从配置中获取API密钥
         if not api_key and "api_key" in model_config:
             api_key = model_config["api_key"]
-            
+
         # 如果存在兼容性标识符（如dashscope通过compatible-mode提供的OpenAI兼容接口）
         if not api_key and "compatible-mode" in api_base:
             # 从URL中提取实际提供商名称
@@ -358,11 +358,11 @@ def call_ai_api(model_config: Dict, error_info: Dict) -> str:
                 compat_provider = "DASHSCOPE"
             elif "baichuan" in api_base:
                 compat_provider = "BAICHUAN"
-            
+
             if compat_provider:
                 compat_env_var = f"{compat_provider}_API_KEY"
                 api_key = os.environ.get(compat_env_var)
-                
+
                 if os.environ.get("CAO_DEBUG_MODE") and api_key:
                     print(f"从兼容模式环境变量获取API密钥: {compat_env_var}")
 
@@ -614,6 +614,10 @@ def main():
         sys.exit(1)
 
     model_config = SUPPORTED_MODELS[model_name]
+
+    # 调试模式下打印模型信息
+    if args.debug:
+        print(f"选择的模型配置: {model_config}")
 
     # 调用 AI API
     print("\ncao🌿\n")

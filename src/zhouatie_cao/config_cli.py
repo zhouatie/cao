@@ -32,7 +32,7 @@ def list_models():
 
 def add_model(args):
     """Add or update a model"""
-    result = config.add_model(args.name, args.api_base, args.model)
+    result = config.add_model(args.name, args.api_base, args.model, getattr(args, 'api_key', None))
     if result:
         print(f"已成功添加/更新模型 '{args.name}'")
     else:
@@ -126,15 +126,17 @@ def interactive_config():
             name = input("输入供应商名称(英文): ").strip()
             api_base = input("输入 API 基础 URL: ").strip()
             model = input("输入模型名称: ").strip()
+            api_key = input("输入API密钥 (可选，留空则使用环境变量): ").strip()
 
             if name and api_base and model:
-                result = config.add_model(name, api_base, model)
+                # 如果API密钥为空，传递None
+                result = config.add_model(name, api_base, model, api_key if api_key else None)
                 if result:
                     print(f"已成功添加/更新模型 '{name}'")
                 else:
                     print(f"添加/更新模型 '{name}' 失败")
             else:
-                print("错误: 所有字段都必须填写")
+                print("错误: 供应商名称、API基础URL和模型名称都必须填写")
 
         elif choice == "2":
             models = config.get_supported_models()
@@ -215,6 +217,7 @@ def run_config_cli():
     add_parser.add_argument("name", help="模型名称")
     add_parser.add_argument("api_base", help="API 基础 URL")
     add_parser.add_argument("model", help="模型名称")
+    add_parser.add_argument("--api-key", help="API密钥(可选，如不提供则使用环境变量)")
 
     # Remove model command
     remove_parser = subparsers.add_parser("remove", help="删除模型配置")

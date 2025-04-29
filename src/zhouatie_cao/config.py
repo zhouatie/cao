@@ -13,9 +13,9 @@ from typing import Dict, Any, Optional
 # Default configuration
 DEFAULT_CONFIG = {
     "models": {
-        "deepseek": {"api_base": "https://api.deepseek.com/v1", "model": "deepseek-coder"},
-        "openai": {"api_base": "https://api.openai.com/v1", "model": "gpt-4o"},
-        "ollama": {"api_base": "http://localhost:11434/v1", "model": "qwen2.5-coder:7b"},
+        "deepseek": {"api_base": "https://api.deepseek.com/v1", "model": "deepseek-coder", "provider": "deepseek"},
+        "openai": {"api_base": "https://api.openai.com/v1", "model": "gpt-4o", "provider": "openai"},
+        "ollama": {"api_base": "http://localhost:11434/v1", "model": "qwen2.5-coder:7b", "provider": "ollama"},
     },
     "default_model": "deepseek"
 }
@@ -79,15 +79,22 @@ def save_config(config: Dict[str, Any]) -> bool:
         print(f"Error saving config file: {e}")
         return False
 
-def add_model(name: str, api_base: str, model: str) -> bool:
+def add_model(name: str, api_base: str, model: str, api_key: Optional[str] = None) -> bool:
     """Add or update a model in the configuration."""
     config = load_config()
     
     # Update or add the model
-    config["models"][name] = {
+    model_config = {
         "api_base": api_base,
-        "model": model
+        "model": model,
+        "provider": name  # 添加provider字段，默认与模型名称相同
     }
+    
+    # 如果提供了API密钥，也添加到配置中
+    if api_key:
+        model_config["api_key"] = api_key
+    
+    config["models"][name] = model_config
     
     return save_config(config)
 
