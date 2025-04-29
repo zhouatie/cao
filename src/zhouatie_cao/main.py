@@ -414,8 +414,8 @@ def call_ai_api(model_config: Dict, error_info: Dict) -> str:
 
     try:
         # debug 模式下打印请求的 payload
-        if os.environ.get("CAO_DEBUG_MODE"):
-            print(f"[DEBUG] 请求的 payload: {json.dumps(payload, indent=2)}")
+        # if os.environ.get("CAO_DEBUG_MODE"):
+        #     print(f"[DEBUG] 请求的 payload: {json.dumps(payload, indent=2)}")
 
         response = requests.post(
             f"{api_base}/chat/completions", headers=headers, json=payload, timeout=30
@@ -614,7 +614,10 @@ def main():
         sys.exit(1)
 
     model_config = SUPPORTED_MODELS[model_name]
+    if "provider" not in model_config:
+        model_config["provider"] = model_name
 
+    print("model_config", model_config)
     # 调试模式下打印模型信息
     if args.debug:
         print(f"选择的模型配置: {model_config}")
