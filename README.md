@@ -27,39 +27,136 @@ pipx install zhouatie-cao
 
 ### 设置 shell 函数
 
-为了更好地捕获最近执行的命令及其返回码，建议在您的 shell 配置文件（如 `.zshrc` 或 `.bashrc`）中添加以下函数：
+为了更好地捕获最近执行的命令及其返回码，建议在您的 shell 配置文件中添加相应的函数：
 
+### 各操作系统与Shell配置指南
+
+#### macOS 系统
+
+##### ZSH 配置 (macOS 默认 shell，~/.zshrc)
 ```bash
-# ZSH 配置 (.zshrc)
 function cao() {
   local last_cmd=$(fc -ln -1 | sed -e 's/^ *//')
   local last_code=$?
-
-  # 使用 which 命令找到 cao 的确切路径，避免递归
-  local cao_path=$(which cao)
-  if [ -n "$cao_path" ]; then
-    CAO_LAST_COMMAND="$last_cmd" CAO_RETURN_CODE="$last_code" $cao_path "$@"
+  local cao_path=$(command -v zhouatie_cao)
+  if [ -n "$cao_path" ]
+  then
+    CAO_LAST_COMMAND="$last_cmd" CAO_RETURN_CODE="$last_code" "$cao_path" "$@"
   else
     echo "cao 命令未找到，请确保已正确安装"
     return 1
   fi
 }
+```
 
-# BASH 配置 (.bashrc)
+##### Bash 配置 (macOS，~/.bash_profile 或 ~/.bashrc)
+```bash
 function cao() {
-  # 在 bash 中获取最后执行的命令
-  local last_cmd=$(HISTTIMEFORMAT= history 1 | sed 's/^[ 0-9]\+[ ]\+//')
+  local last_cmd=$(fc -ln -1 | sed -e 's/^ *//')
   local last_code=$?
-
-  # 使用 which 命令找到 cao 的确切路径，避免递归
-  local cao_path=$(which cao)
-  if [ -n "$cao_path" ]; then
-    CAO_LAST_COMMAND="$last_cmd" CAO_RETURN_CODE="$last_code" $cao_path "$@"
+  local cao_path=$(command -v zhouatie_cao)
+  if [ -n "$cao_path" ]
+  then
+    CAO_LAST_COMMAND="$last_cmd" CAO_RETURN_CODE="$last_code" "$cao_path" "$@"
   else
     echo "cao 命令未找到，请确保已正确安装"
     return 1
   fi
 }
+```
+
+#### Linux 系统
+
+##### Bash 配置 (Linux 常见默认 shell，~/.bashrc)
+```bash
+function cao() {
+  local last_cmd=$(fc -ln -1 | sed -e 's/^ *//')
+  local last_code=$?
+  local cao_path=$(command -v zhouatie_cao)
+  if [ -n "$cao_path" ]
+  then
+    CAO_LAST_COMMAND="$last_cmd" CAO_RETURN_CODE="$last_code" "$cao_path" "$@"
+  else
+    echo "cao 命令未找到，请确保已正确安装"
+    return 1
+  fi
+}
+```
+
+##### ZSH 配置 (Linux，~/.zshrc)
+```bash
+function cao() {
+  local last_cmd=$(fc -ln -1 | sed -e 's/^ *//')
+  local last_code=$?
+  local cao_path=$(command -v zhouatie_cao)
+  if [ -n "$cao_path" ]
+  then
+    CAO_LAST_COMMAND="$last_cmd" CAO_RETURN_CODE="$last_code" "$cao_path" "$@"
+  else
+    echo "cao 命令未找到，请确保已正确安装"
+    return 1
+  fi
+}
+```
+
+##### Fish Shell 配置 (Linux，~/.config/fish/functions/cao.fish)
+```fish
+function cao
+  set last_cmd (history | head -n1)
+  set last_code $status
+  set cao_path (command -v zhouatie_cao)
+  if test -n "$cao_path"
+    env CAO_LAST_COMMAND="$last_cmd" CAO_RETURN_CODE="$last_code" "$cao_path" $argv
+  else
+    echo "cao 命令未找到，请确保已正确安装"
+    return 1
+  end
+end
+```
+
+#### Windows 系统
+
+##### PowerShell 配置 (Windows，$PROFILE)
+```powershell
+function cao {
+  $last_cmd = (Get-History -Count 1).CommandLine
+  $last_code = $LASTEXITCODE
+  $cao_path = (Get-Command zhouatie_cao -ErrorAction SilentlyContinue).Source
+  if ($cao_path) {
+    $env:CAO_LAST_COMMAND = $last_cmd
+    $env:CAO_RETURN_CODE = $last_code
+    & $cao_path $args
+  } else {
+    Write-Output "cao 命令未找到，请确保已正确安装"
+    return 1
+  }
+}
+```
+
+##### Command Prompt 配置 (Windows，创建 cao.bat 文件并添加到 PATH)
+```batch
+@echo off
+setlocal enabledelayedexpansion
+
+:: 获取命令历史是 CMD 中的限制
+:: 这个实现有限制，只能分析当前执行的命令
+
+set "cao_path="
+for %%i in (zhouatie_cao.exe) do set "cao_path=%%~$PATH:i"
+
+if defined cao_path (
+  set "CAO_RETURN_CODE=%ERRORLEVEL%"
+  "%cao_path%" %*
+) else (
+  echo cao 命令未找到，请确保已正确安装
+  exit /b 1
+)
+```
+
+> **重要说明**: 
+> 1. 使用 `command -v` 替代 `which` 可以避免递归调用问题
+> 2. 确保使用 `zhouatie_cao` 作为可执行文件名称（而非简单的 `cao`）
+> 3. Windows CMD 中无法获取上一条命令，功能会受限
 ```
 
 ### 分析最近一次执行的命令错误（默认行为）

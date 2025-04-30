@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="zhouatie-cao",
-    version="1.0.9",
+    version="1.0.10",
     description="一个捕获终端错误并使用 AI 分析的命令行工具",
     author="zhouatie",
     author_email="zhouatie@gmail.com",
@@ -10,7 +10,7 @@ setup(
     package_dir={"": "src"},
     entry_points={
         "console_scripts": [
-            "cao=zhouatie_cao:main",
+            "zhouatie_cao=zhouatie_cao:main",
         ],
     },
     install_requires=[
