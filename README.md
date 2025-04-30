@@ -173,17 +173,13 @@ if defined cao_path (
 
 > **重要说明**:
 >
-> 1. 使用 `command -v` 替代 `which` 可以避免递归调用问题
-> 2. 确保使用 `zhouatie_cao` 作为可执行文件名称（而非简单的 `cao`）
-> 3. Windows CMD 中无法获取上一条命令，功能会受限
-
-````
+> 1. Windows CMD 中无法获取上一条命令，功能会受限
 
 ### 分析最近一次执行的命令错误（默认行为）
 
 ```bash
 cao
-````
+```
 
 ### 执行命令并在出错时分析
 
@@ -191,7 +187,7 @@ cao
 cao your_command_here
 ```
 
-### 分析历史命令中特定行号的命令
+### 分析历史命令中特定行号的命令(暂时有问题)
 
 ```bash
 cao -n 42
@@ -200,7 +196,7 @@ cao -n 42
 ### 指定使用的 AI 模型
 
 ```bash
-cao -m deepseek your_command_here
+cao -m deepseek
 ```
 
 支持的模型:
@@ -210,9 +206,6 @@ cao -m deepseek your_command_here
 -   openai
 -   以及任何支持OpenAI兼容API的模型，如:
     -   anthropic
-    -   mistral
-    -   cohere
-    -   dashscope(阿里云)
     -   等更多通过自定义配置添加的模型
 
 ### 配置 AI 模型
@@ -231,7 +224,7 @@ cao --config
 ### 开启调试模式
 
 ```bash
-cao -d your_command_here
+cao -d
 ```
 
 ## 环境变量和API密钥
