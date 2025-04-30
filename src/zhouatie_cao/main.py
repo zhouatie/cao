@@ -617,13 +617,12 @@ def main():
     if "provider" not in model_config:
         model_config["provider"] = model_name
 
-    print("model_config", model_config)
     # 调试模式下打印模型信息
     if args.debug:
         print(f"选择的模型配置: {model_config}")
 
     # 调用 AI API
-    print("\ncao🌿\n")
+    print("\ncao 🌿\n")
     print(f"正在使用 {model_name} 分析错误...")
     print()
     ai_response = call_ai_api(model_config, error_info)
