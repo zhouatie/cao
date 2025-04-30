@@ -34,13 +34,13 @@ pipx install zhouatie-cao
 #### macOS 系统
 
 ##### ZSH 配置 (macOS 默认 shell，~/.zshrc)
+
 ```bash
 function cao() {
-  # 获取上一条命令前先保存返回码
+  local last_cmd=$(fc -ln -1 | sed -e 's/^ *//')
   local last_code=$?
-  # 获取函数调用前一条命令
-  local last_cmd=$(fc -ln -2 | head -n 1 | sed -e 's/^ *//')
-  local cao_path=$(command -v zhouatie_cao)
+  local cao_path=$(which zhouatie_cao)
+
   if [ -n "$cao_path" ]
   then
     CAO_LAST_COMMAND="$last_cmd" CAO_RETURN_CODE="$last_code" "$cao_path" "$@"
@@ -52,12 +52,13 @@ function cao() {
 ```
 
 ##### Bash 配置 (macOS，~/.bash_profile 或 ~/.bashrc)
+
 ```bash
 function cao() {
   # 获取上一条命令前先保存返回码
   local last_code=$?
   # 获取函数调用前一条命令
-  local last_cmd=$(fc -ln -2 | head -n 1 | sed -e 's/^ *//')
+  local last_cmd=$(fc -ln -1 | sed -e 's/^ *//')
   local cao_path=$(command -v zhouatie_cao)
   if [ -n "$cao_path" ]
   then
@@ -72,6 +73,7 @@ function cao() {
 #### Linux 系统
 
 ##### Bash 配置 (Linux 常见默认 shell，~/.bashrc)
+
 ```bash
 function cao() {
   # 获取上一条命令前先保存返回码
@@ -90,6 +92,7 @@ function cao() {
 ```
 
 ##### ZSH 配置 (Linux，~/.zshrc)
+
 ```bash
 function cao() {
   # 获取上一条命令前先保存返回码
@@ -108,6 +111,7 @@ function cao() {
 ```
 
 ##### Fish Shell 配置 (Linux，~/.config/fish/functions/cao.fish)
+
 ```fish
 function cao
   # 获取上一条命令前先保存返回码
@@ -127,6 +131,7 @@ end
 #### Windows 系统
 
 ##### PowerShell 配置 (Windows，$PROFILE)
+
 ```powershell
 function cao {
   # 获取上一条命令的返回码
@@ -146,6 +151,7 @@ function cao {
 ```
 
 ##### Command Prompt 配置 (Windows，创建 cao.bat 文件并添加到 PATH)
+
 ```batch
 @echo off
 setlocal enabledelayedexpansion
@@ -165,17 +171,19 @@ if defined cao_path (
 )
 ```
 
-> **重要说明**: 
+> **重要说明**:
+>
 > 1. 使用 `command -v` 替代 `which` 可以避免递归调用问题
 > 2. 确保使用 `zhouatie_cao` 作为可执行文件名称（而非简单的 `cao`）
 > 3. Windows CMD 中无法获取上一条命令，功能会受限
-```
+
+````
 
 ### 分析最近一次执行的命令错误（默认行为）
 
 ```bash
 cao
-```
+````
 
 ### 执行命令并在出错时分析
 
