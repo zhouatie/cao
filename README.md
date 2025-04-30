@@ -30,17 +30,33 @@ pipx install zhouatie-cao
 为了更好地捕获最近执行的命令及其返回码，建议在您的 shell 配置文件（如 `.zshrc` 或 `.bashrc`）中添加以下函数：
 
 ```bash
+# ZSH 配置 (.zshrc)
 function cao() {
   local last_cmd=$(fc -ln -1 | sed -e 's/^ *//')
   local last_code=$?
 
-  # Use the full path to the cao executable to avoid recursion
-  if command -v ~/.local/bin/cao >/dev/null 2>&1; then
-    CAO_LAST_COMMAND="$last_cmd" CAO_RETURN_CODE="$last_code" ~/.local/bin/cao "$@"
-  elif command -v /usr/local/bin/cao >/dev/null 2>&1; then
-    CAO_LAST_COMMAND="$last_cmd" CAO_RETURN_CODE="$last_code" /usr/local/bin/cao "$@"
+  # 使用 which 命令找到 cao 的确切路径，避免递归
+  local cao_path=$(which cao)
+  if [ -n "$cao_path" ]; then
+    CAO_LAST_COMMAND="$last_cmd" CAO_RETURN_CODE="$last_code" $cao_path "$@"
   else
-    echo "cao executable not found"
+    echo "cao 命令未找到，请确保已正确安装"
+    return 1
+  fi
+}
+
+# BASH 配置 (.bashrc)
+function cao() {
+  # 在 bash 中获取最后执行的命令
+  local last_cmd=$(HISTTIMEFORMAT= history 1 | sed 's/^[ 0-9]\+[ ]\+//')
+  local last_code=$?
+
+  # 使用 which 命令找到 cao 的确切路径，避免递归
+  local cao_path=$(which cao)
+  if [ -n "$cao_path" ]; then
+    CAO_LAST_COMMAND="$last_cmd" CAO_RETURN_CODE="$last_code" $cao_path "$@"
+  else
+    echo "cao 命令未找到，请确保已正确安装"
     return 1
   fi
 }
