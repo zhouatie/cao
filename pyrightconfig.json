@@ -1,0 +1,6 @@
+{
+  "reportMissingImports": false,
+  "extraPaths": [
+    "./src"
+  ]
+}
