@@ -22,7 +22,7 @@ except ImportError:
     import subprocess
     import sys
 
-    error("依赖库 prompt_toolkit 未安装，正在尝试安装...")
+    info("首次使用交互模式，正在为您加载所需依赖...")
     try:
         subprocess.check_call(
             [sys.executable, "-m", "pip", "install", "prompt_toolkit"]
@@ -32,7 +32,7 @@ except ImportError:
         from prompt_toolkit.formatted_text import HTML
         from prompt_toolkit.styles import Style
 
-        info("成功安装 prompt_toolkit")
+        info("依赖加载完成！")
     except Exception as e:
         error(f"安装 prompt_toolkit 失败: {str(e)}")
         print("请手动安装 prompt_toolkit 库: pip install prompt_toolkit")
