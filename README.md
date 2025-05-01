@@ -7,7 +7,6 @@
 -   捕获命令行执行错误并分析
 -   支持多种 AI 模型（ollama、deepseek、openai）
 -   分析最近执行的命令错误
--   分析特定历史命令错误
 
 ## 系统要求
 
@@ -187,12 +186,6 @@ cao
 cao your_command_here
 ```
 
-### 分析历史命令中特定行号的命令(暂时有问题)
-
-```bash
-cao -n 42
-```
-
 ### 指定使用的 AI 模型
 
 ```bash
@@ -262,8 +255,6 @@ cao
 # 使用 Ollama 模型分析
 cao -m ollama
 
-# 使用 deepseek 模型分析（默认）
-cao
 ```
 
 ## 本地开发与调试
