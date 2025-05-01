@@ -9,10 +9,10 @@ import os
 import subprocess
 import threading
 import time
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Mapping
 
 
-def execute_command(command: List[str]) -> Optional[Dict[str, str]]:
+def execute_command(command: List[str]) -> Optional[Dict[str, Any]]:
     """执行命令并捕获错误"""
     # 对所有命令统一处理，不再区分ls命令
     cmd = " ".join(command)
@@ -47,7 +47,7 @@ def execute_command(command: List[str]) -> Optional[Dict[str, str]]:
         }
 
 
-def get_last_command_error() -> Dict[str, Union[str, int]]:
+def get_last_command_error() -> Dict[str, Any]:
     """获取最后一个命令的错误输出"""
     # 首先检查是否有环境变量设置的命令
     env_command = os.environ.get("CAO_LAST_COMMAND")
@@ -57,8 +57,10 @@ def get_last_command_error() -> Dict[str, Union[str, int]]:
         try:
             returncode = int(env_returncode) if env_returncode else -1
             if os.environ.get("CAO_DEBUG_MODE"):
-                print(f"[DEBUG] 从环境变量获取命令: {env_command}")
-                print(f"[DEBUG] 从环境变量获取返回码: {returncode}")
+                from ..utils.logger import debug
+
+                debug(f"从环境变量获取命令: {env_command}")
+                debug(f"从环境变量获取返回码: {returncode}")
 
             # 检查是否已经在错误重现模式，避免递归执行
             if os.environ.get("CAO_REPRODUCING_ERROR"):
@@ -72,55 +74,34 @@ def get_last_command_error() -> Dict[str, Union[str, int]]:
             # 设置环境变量标记错误重现
             os.environ["CAO_REPRODUCING_ERROR"] = "1"
 
-            # 添加 10s 超时机制
-            import threading
-            import time
-            from threading import Timer
+            # 添加超时机制
+            timeout_seconds = 10
+            result = {"output": "", "returncode": -1}
 
-            result = {"output": "", "completed": False}
+            try:
+                # 直接使用 subprocess.run 的内置超时功能
+                error_proc = subprocess.run(
+                    env_command,
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    universal_newlines=True,  # 兼容 Python 3.6 及更早版本
+                    timeout=timeout_seconds,  # 设置超时
+                )
 
-            def run_command():
-                try:
-                    error_proc = subprocess.run(
-                        env_command,
-                        shell=True,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        universal_newlines=True,  # 兼容 Python 3.6 及更早版本
-                        timeout=20,  # 设置子进程超时为 20 秒
-                    )
+                result["output"] = error_proc.stderr or error_proc.stdout
+                result["returncode"] = error_proc.returncode
+            except subprocess.TimeoutExpired:
+                result["output"] = f"命令执行超时（超过 {timeout_seconds} 秒）"
+            except Exception as e:
+                result["output"] = f"执行命令时出错: {str(e)}"
 
-                    output_text = error_proc.stderr or error_proc.stdout
-                    result["output"] = output_text
-                    result["returncode"] = error_proc.returncode
-                    result["completed"] = True
-                except subprocess.TimeoutExpired:
-                    result["output"] = "命令执行超时（超过 10 秒）"
-                    result["returncode"] = -1
-                    result["completed"] = True
-                except Exception as e:
-                    result["output"] = f"执行命令时出错: {str(e)}"
-                    result["returncode"] = -1
-                    result["completed"] = True
-
-            # 启动命令执行线程
-            cmd_thread = threading.Thread(target=run_command)
-            cmd_thread.daemon = True
-            cmd_thread.start()
-
-            # 等待最多 10 秒
-            timeout = 10
-            start_time = time.time()
-            while not result["completed"] and time.time() - start_time < timeout:
-                time.sleep(0.1)
-
-            if not result["completed"]:
-                return {
-                    "command": env_command,
-                    "error": "命令执行超时（超过 10 秒）",
-                    "returncode": -1,
-                    "original_command": env_command,
-                }
+            return {
+                "command": env_command,
+                "error": result["output"],
+                "returncode": result["returncode"],
+                "original_command": env_command,
+            }
 
             return {
                 "command": env_command,
@@ -130,14 +111,18 @@ def get_last_command_error() -> Dict[str, Union[str, int]]:
             }
         except Exception as e:
             if os.environ.get("CAO_DEBUG_MODE"):
-                print(f"[DEBUG] 处理环境变量命令时出错: {str(e)}")
+                from ..utils.logger import error
+
+                error(f"处理环境变量命令时出错: {str(e)}", exc_info=True)
 
     # 如果没有环境变量或处理失败，继续使用原来的方法
 
     # 如果方法一失败，返回一个有意义的错误信息
     # 不再默认执行方法二，因为它可能会读取不相关的历史文件
     if os.environ.get("CAO_DEBUG_MODE"):
-        print("[DEBUG] 无法获取当前会话的最后执行命令")
+        from ..utils.logger import warning
+
+        warning("无法获取当前会话的最后执行命令")
 
     return {
         "command": "未知命令",

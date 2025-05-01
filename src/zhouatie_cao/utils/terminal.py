@@ -69,7 +69,7 @@ def get_string_display_width(s: str) -> int:
     """获取字符串在终端中的显示宽度，考虑中文等宽字符"""
     width = 0
     for char in s:
-        # 中文字符、日文、韩文等宽字符通常显示宽度为2
+        # 中文字符宽字符通常显示宽度为2
         if ord(char) > 127:
             width += 2
         else:
