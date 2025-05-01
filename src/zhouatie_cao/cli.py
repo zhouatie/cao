@@ -78,13 +78,14 @@ def parse_args():
 
 
 def handle_interactive_session(
-    model_config: Dict[str, Any], initial_error_info: Optional[Dict[str, Any]] = None
+    model_config: Dict[str, Any], initial_error_info: Optional[Dict[str, Any]] = None, is_chat_mode: bool = False
 ):
     """处理交互式对话会话
 
     Args:
         model_config: AI模型配置
         initial_error_info: 初始错误信息（如果有的话）
+        is_chat_mode: 是否是通过 --chat 参数启动的聊天模式
     """
     # 创建会话历史
     history = InMemoryHistory()
@@ -103,7 +104,7 @@ def handle_interactive_session(
     conversation_context = []
 
     # 检查是否为纯聊天模式
-    is_pure_chat_mode = not initial_error_info and args.chat if 'args' in locals() else True
+    is_pure_chat_mode = not initial_error_info and is_chat_mode
     
     # 如果有初始错误信息，添加到上下文
     if initial_error_info:
@@ -342,7 +343,7 @@ def main():
 
     # 检查是否进入对话模式
     if args.chat:
-        handle_interactive_session(model_config, error_info)
+        handle_interactive_session(model_config, error_info, is_chat_mode=True)
     else:
         # 调用 AI API
         print("\ncao 🌿\n")
