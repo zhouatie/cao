@@ -31,6 +31,7 @@ except ImportError:
         from prompt_toolkit.history import InMemoryHistory
         from prompt_toolkit.formatted_text import HTML
         from prompt_toolkit.styles import Style
+
         info("成功安装 prompt_toolkit")
     except Exception as e:
         error(f"安装 prompt_toolkit 失败: {str(e)}")
@@ -230,7 +231,7 @@ def handle_interactive_session(
 
             # 打印小草的名字和AI响应，聊天模式下不使用边框
             if is_chat_mode:
-                print("小草🌱:")
+                print("\n\033[1;32m小草🌱\033[0m:")
                 # 逐字打印回复，增加互动感
                 for char in ai_response:
                     print(char, end="", flush=True)

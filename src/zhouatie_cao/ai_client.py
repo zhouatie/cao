@@ -12,9 +12,13 @@ from typing import Dict, Any, List, Optional
 from urllib.parse import urlparse
 
 
-def call_ai_api(model_config: Dict, error_info: Optional[Dict] = None, messages: Optional[List] = None) -> str:
+def call_ai_api(
+    model_config: Dict,
+    error_info: Optional[Dict] = None,
+    messages: Optional[List] = None,
+) -> str:
     """调用 AI API 分析错误或处理会话消息
-    
+
     Args:
         model_config: 模型配置信息
         error_info: 错误信息字典，用于构建错误分析提示
@@ -130,7 +134,9 @@ def call_ai_api(model_config: Dict, error_info: Optional[Dict] = None, messages:
     elif error_info:
         # 构建错误分析提示
         # 优先使用原始命令（如果存在）
-        command = error_info.get("original_command", error_info.get("command", "未知命令"))
+        command = error_info.get(
+            "original_command", error_info.get("command", "未知命令")
+        )
         error_text = error_info.get("error", "未知错误")
         returncode = error_info.get("returncode", -1)
 
@@ -165,6 +171,9 @@ def call_ai_api(model_config: Dict, error_info: Optional[Dict] = None, messages:
         "temperature": 0.7,
     }
 
+    # debug 模式把消息打印出来
+    # debug(f"将发送到AI的消息: {json.dumps(payload, indent=2, ensure_ascii=False)}")
+
     try:
         debug(f"发送请求到 {api_base}/chat/completions")
         # 打印请求头时对Authorization进行脱敏处理
@@ -179,7 +188,7 @@ def call_ai_api(model_config: Dict, error_info: Optional[Dict] = None, messages:
                     debug_headers["Authorization"] = f"Bearer {masked_token}"
                 else:
                     debug_headers["Authorization"] = "Bearer ****"
-        
+
         debug(f"请求头: {debug_headers}")
 
         response = requests.post(
