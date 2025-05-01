@@ -76,7 +76,7 @@ def parse_args():
         choices=list(SUPPORTED_MODELS.keys()),
         help=f"选择 AI 模型 (默认: {DEFAULT_MODEL})",
     )
-    parser.add_argument("-n", "--number", type=int, help="分析历史记录中特定行号的错误")
+
     parser.add_argument("-d", "--debug", action="store_true", help="开启调试模式")
     parser.add_argument("--config", action="store_true", help="配置 AI 模型")
     parser.add_argument("command", nargs="*", help="要执行的命令 (如果提供)")
@@ -198,55 +198,7 @@ def get_last_command_error():
     }
 
 
-def get_command_by_number(number: int):
-    """根据历史记录行号获取命令"""
-    history_file = get_shell_history_file()
-    shell = os.environ.get("SHELL", "")
 
-    try:
-        with open(history_file, "r", encoding="utf-8", errors="ignore") as f:
-            history = f.readlines()
-
-        if number < 1 or number > len(history):
-            return f"历史记录行号 {number} 超出范围 (1-{len(history)})"
-
-        # 获取指定行号的命令
-        command = history[number - 1].strip()
-
-        if "zsh" in shell:
-            # zsh 历史记录格式: ": timestamp:0;command"
-            match = re.search(r";\s*(.*?)$", command)
-            if match:
-                command = match.group(1)
-
-        # 使用Popen执行命令
-        process = subprocess.Popen(
-            command,
-            shell=True,
-            stderr=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            universal_newlines=True,  # 兼容 Python 3.6 及更早版本
-        )
-        stdout, stderr = process.communicate()
-        returncode = process.returncode
-
-        if returncode != 0:
-            return {
-                "command": command,
-                "error": stderr or stdout,
-                "returncode": returncode,
-                "original_command": command,  # 保存完整的原始命令
-            }
-        else:
-            return {
-                "command": command,
-                "message": "这个命令执行成功，没有错误",
-                "returncode": 0,
-                "original_command": command,  # 保存完整的原始命令
-            }
-
-    except Exception as e:
-        return f"获取命令时出错: {str(e)}"
 
 
 def execute_command(command: List[str]):
@@ -547,9 +499,6 @@ def main():
     if args.command:
         # 如果提供了命令参数，执行该命令
         error_info = execute_command(args.command)
-    elif args.number is not None:
-        # 如果提供了行号参数，获取指定行号的命令
-        error_info = get_command_by_number(args.number)
     else:
         # 默认分析最后一个命令
         error_info = get_last_command_error()
@@ -580,8 +529,7 @@ def main():
             print("未能获取到命令的错误信息，无法进行分析。")
             print("请尝试以下方法：")
             print("1. 直接提供要分析的命令，例如：cao [你的命令]")
-            print("2. 使用 -n 参数指定历史命令号，例如：cao -n 10")
-            print("3. 先执行一个会出错的命令，然后再运行 cao")
+            print("2. 先执行一个会出错的命令，然后再运行 cao")
             sys.exit(1)
 
     if isinstance(error_info, str):
