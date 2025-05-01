@@ -139,7 +139,8 @@ def call_ai_api(model_config: Dict, error_info: Optional[Dict] = None, messages:
 
         system_message = """你是一个命令行错误分析专家。
 请分析以下命令错误并提供解决方案。重要提示：你接收的命令是用户真实输入的，不要猜测他输入了其他命令。
-例如，如果错误显示命令未找到，请分析实际给出的命令，而不是猜测用户可能想输入的其他命令。"""
+例如，如果错误显示命令未找到，请分析实际给出的命令，而不是猜测用户可能想输入的其他命令。
+请用友好、轻松的语气回答，可以适当使用表情符号让回答更生动。"""
 
         user_message = f"""
 命令: {command}
@@ -148,6 +149,7 @@ def call_ai_api(model_config: Dict, error_info: Optional[Dict] = None, messages:
 {error_text}
 
 请分析这个特定命令产生的错误，并提供准确的解决方案。避免猜测用户可能想要运行的其他命令，除非错误信息明确显示命令被系统解析为其他内容。
+请用轻松友好的口吻回答，就像和朋友聊天一样，可以适当使用一些表情符号，让回答更加生动有趣。
 """
         payload_messages = [
             {"role": "system", "content": system_message},
