@@ -169,11 +169,15 @@ def _print_chat_mode(text: str):
     # 处理文本换行
     lines = _process_text_to_lines(text, terminal_width)
 
+    print()
+
     # 小草消息使用绿色前缀
-    prefix = "\033[1;32m小草 🌱\033[0m: "
+    prefix = "\033[1;32m小草🌱\033[0m: "
     print(prefix)
     for line in lines:
         print(line)
+
+    print()
 
 
 def print_with_borders(text: str, mode: str = "normal", role: str = "assistant"):
