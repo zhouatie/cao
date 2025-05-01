@@ -150,7 +150,20 @@ def call_ai_api(model_config: Dict, error_info: Dict) -> str:
 
     try:
         debug(f"发送请求到 {api_base}/chat/completions")
-        debug(f"请求头: {headers}")
+        # 打印请求头时对Authorization进行脱敏处理
+        debug_headers = headers.copy()
+        if "Authorization" in debug_headers:
+            auth_value = debug_headers["Authorization"]
+            if auth_value.startswith("Bearer "):
+                token = auth_value[7:]  # 移除 "Bearer " 前缀
+                if len(token) > 10:
+                    # 保留前4位和后4位，中间用****替换
+                    masked_token = token[:4] + "****" + token[-4:]
+                    debug_headers["Authorization"] = f"Bearer {masked_token}"
+                else:
+                    debug_headers["Authorization"] = "Bearer ****"
+        
+        debug(f"请求头: {debug_headers}")
 
         response = requests.post(
             f"{api_base}/chat/completions", headers=headers, json=payload, timeout=30
