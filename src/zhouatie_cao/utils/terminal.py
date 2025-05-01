@@ -51,20 +51,6 @@ def get_terminal_size():
             return 80, 24  # 默认大小
 
 
-def get_shell_history_file() -> str:
-    """获取当前 shell 的历史文件路径"""
-    shell = os.environ.get("SHELL", "")
-    home = os.environ.get("HOME", "")
-
-    if "zsh" in shell:
-        return os.path.join(home, ".zsh_history")
-    elif "bash" in shell:
-        return os.path.join(home, ".bash_history")
-    else:
-        # 默认尝试 bash 历史
-        return os.path.join(home, ".bash_history")
-
-
 def get_string_display_width(s: str) -> int:
     """获取字符串在终端中的显示宽度，考虑中文等宽字符"""
     width = 0
