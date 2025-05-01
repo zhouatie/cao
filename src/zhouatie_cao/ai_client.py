@@ -8,12 +8,18 @@ AI API 客户端
 import os
 import json
 import requests
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 from urllib.parse import urlparse
 
 
-def call_ai_api(model_config: Dict, error_info: Dict) -> str:
-    """调用 AI API 分析错误"""
+def call_ai_api(model_config: Dict, error_info: Optional[Dict] = None, messages: Optional[List] = None) -> str:
+    """调用 AI API 分析错误或处理会话消息
+    
+    Args:
+        model_config: 模型配置信息
+        error_info: 错误信息字典，用于构建错误分析提示
+        messages: 会话消息列表，如果提供则直接使用
+    """
     # 导入日志记录器
     from .utils.logger import get_logger, debug, info, warning, error, critical
 
@@ -117,20 +123,25 @@ def call_ai_api(model_config: Dict, error_info: Dict) -> str:
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
 
-    # 构建提示信息
-    # 优先使用原始命令（如果存在）
-    command = error_info.get("original_command", error_info.get("command", "未知命令"))
-    error_text = error_info.get("error", "未知错误")
-    returncode = error_info.get("returncode", -1)
+    # 准备消息内容
+    if messages:
+        # 如果提供了消息列表，直接使用
+        payload_messages = messages
+    elif error_info:
+        # 构建错误分析提示
+        # 优先使用原始命令（如果存在）
+        command = error_info.get("original_command", error_info.get("command", "未知命令"))
+        error_text = error_info.get("error", "未知错误")
+        returncode = error_info.get("returncode", -1)
 
-    # 调试输出，帮助排查命令传递问题
-    debug(f"将发送到AI的命令: {command}")
+        # 调试输出，帮助排查命令传递问题
+        debug(f"将发送到AI的命令: {command}")
 
-    system_message = """你是一个命令行错误分析专家。
+        system_message = """你是一个命令行错误分析专家。
 请分析以下命令错误并提供解决方案。重要提示：你接收的命令是用户真实输入的，不要猜测他输入了其他命令。
 例如，如果错误显示命令未找到，请分析实际给出的命令，而不是猜测用户可能想输入的其他命令。"""
 
-    user_message = f"""
+        user_message = f"""
 命令: {command}
 返回码: {returncode}
 错误信息:
@@ -138,13 +149,17 @@ def call_ai_api(model_config: Dict, error_info: Dict) -> str:
 
 请分析这个特定命令产生的错误，并提供准确的解决方案。避免猜测用户可能想要运行的其他命令，除非错误信息明确显示命令被系统解析为其他内容。
 """
+        payload_messages = [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": user_message},
+        ]
+    else:
+        error("未提供错误信息或消息列表")
+        return "错误: API调用未提供错误信息或会话消息"
 
     payload = {
         "model": model,
-        "messages": [
-            {"role": "system", "content": system_message},
-            {"role": "user", "content": user_message},
-        ],
+        "messages": payload_messages,
         "temperature": 0.7,
     }
 
