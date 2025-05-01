@@ -161,7 +161,7 @@ def handle_interactive_session(
 
             # 打印初始欢迎消息
             print("\ncao 🌿 轻松聊天模式\n")
-            print_with_borders("嗨！我是小草 🌿，你的编程闲聊伙伴！今天想聊点什么？技术问题、开发困扰，还是只是想放松一下大脑？我随时准备陪你唠嗑～")
+            print_with_borders("嗨！我是小草 🌿，你的编程闲聊伙伴！今天想聊点什么？技术问题、开发困扰，还是只是想放松一下大脑？我随时准备陪你唠嗑～", mode="chat")
         else:
             # 如果没有初始错误，且不是纯聊天模式，则使用一般的问候
             conversation_context.append(
@@ -208,17 +208,58 @@ def handle_interactive_session(
             # 添加用户消息到上下文
             conversation_context.append({"role": "user", "content": user_input})
 
-            # 调用AI API获取响应
-            print("正在思考...")
-            ai_response = call_ai_api(
-                model_config, error_info=None, messages=conversation_context
-            )
+            # 调用AI API获取响应 - 使用多线程处理
+            loading_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+            print("", end="\r")
+            i = 0
+            
+            # 创建结果容器
+            response_result = {"ai_response": None, "error": None, "done": False}
+            
+            # 定义API调用线程函数
+            def api_call_thread():
+                try:
+                    response_result["ai_response"] = call_ai_api(
+                        model_config, error_info=None, messages=conversation_context
+                    )
+                except Exception as e:
+                    # 如果API调用失败，记录错误
+                    error(f"AI API调用出错: {str(e)}", exc_info=True)
+                    response_result["error"] = str(e)
+                finally:
+                    response_result["done"] = True
+            
+            # 启动API调用线程
+            import threading
+            thread = threading.Thread(target=api_call_thread)
+            thread.daemon = True  # 设置为守护线程，这样主线程退出时它会自动退出
+            thread.start()
+            
+            # 显示加载动画，直到API调用完成
+            start_time = time.time()
+            while not response_result["done"]:
+                if time.time() - start_time > 0.1:  # 每100ms更新一次
+                    print(f"\r{loading_chars[i % len(loading_chars)]} AI正在思考...", end="", flush=True)
+                    i += 1
+                    start_time = time.time()
+                time.sleep(0.01)  # 小的睡眠以减少CPU使用
+            
+            # 清除加载动画
+            print("\r" + " " * 50 + "\r", end="", flush=True)
+            
+            # 处理结果
+            if response_result["error"]:
+                ai_response = f"抱歉，我遇到了一些问题: {response_result['error']}"
+            else:
+                ai_response = response_result["ai_response"]
 
             # 添加AI响应到上下文
             conversation_context.append({"role": "assistant", "content": ai_response})
 
-            # 打印AI响应
-            print_with_borders(ai_response)
+            # 添加更多空行作为消息间隔
+            print("\n\n")
+            # 打印AI响应，聊天模式下使用更轻松的边框样式
+            print_with_borders(ai_response, mode="chat" if is_chat_mode else "normal")
 
             # 如果对话历史太长，清理最早的对话（保留system消息）
             if len(conversation_context) > 20:
@@ -264,45 +305,47 @@ def main():
 
     error_info = None
 
-    # 确定分析哪个命令的错误
-    if args.command:
-        # 如果提供了命令参数，执行该命令
-        error_info = execute_command(args.command)
+    # 如果是聊天模式，不需要获取命令错误信息
+    if args.chat:
+        # 直接进入对话模式，不需要错误信息
+        debug("聊天模式启动，跳过错误信息获取")
     else:
-        # 默认分析最后一个命令
-        error_info = get_last_command_error()
-
-    # 如果没有获取到错误信息
-    if not error_info:
-        # 调试模式下尝试从环境变量获取测试数据
-        if args.debug:
-            bypass_command = os.environ.get("CAO_BYPASS_COMMAND")
-            bypass_error = os.environ.get("CAO_BYPASS_ERROR")
-            bypass_returncode = os.environ.get("CAO_BYPASS_RETURN_CODE")
-
-            if bypass_command and bypass_error and bypass_returncode:
-                debug("使用环境变量中的命令结果（仅用于测试）")
-                debug(f"命令: {bypass_command}")
-                debug(f"返回码: {bypass_returncode}")
-                debug(f"错误信息: {bypass_error}")
-
-                error_info = {
-                    "command": bypass_command,
-                    "original_command": bypass_command,
-                    "error": bypass_error,
-                    "returncode": int(bypass_returncode),
-                }
-        elif args.chat:
-            # 直接进入对话模式，不需要错误信息
-            pass
+        # 确定分析哪个命令的错误
+        if args.command:
+            # 如果提供了命令参数，执行该命令
+            error_info = execute_command(args.command)
         else:
-            # 非调试模式下，给出提示并终止程序
-            print("未能获取到命令的错误信息，无法进行分析。")
-            print("请尝试以下方法：")
-            print("1. 直接提供要分析的命令，例如：cao [你的命令]")
-            print("2. 先执行一个会出错的命令，然后再运行 cao")
-            print("3. 使用 -c 参数启动对话模式: cao -c")
-            sys.exit(1)
+            # 默认分析最后一个命令
+            error_info = get_last_command_error()
+
+        # 如果没有获取到错误信息
+        if not error_info:
+            # 调试模式下尝试从环境变量获取测试数据
+            if args.debug:
+                bypass_command = os.environ.get("CAO_BYPASS_COMMAND")
+                bypass_error = os.environ.get("CAO_BYPASS_ERROR")
+                bypass_returncode = os.environ.get("CAO_BYPASS_RETURN_CODE")
+
+                if bypass_command and bypass_error and bypass_returncode:
+                    debug("使用环境变量中的命令结果（仅用于测试）")
+                    debug(f"命令: {bypass_command}")
+                    debug(f"返回码: {bypass_returncode}")
+                    debug(f"错误信息: {bypass_error}")
+
+                    error_info = {
+                        "command": bypass_command,
+                        "original_command": bypass_command,
+                        "error": bypass_error,
+                        "returncode": int(bypass_returncode),
+                    }
+            else:
+                # 非调试模式下，给出提示并终止程序
+                print("未能获取到命令的错误信息，无法进行分析。")
+                print("请尝试以下方法：")
+                print("1. 直接提供要分析的命令，例如：cao [你的命令]")
+                print("2. 先执行一个会出错的命令，然后再运行 cao")
+                print("3. 使用 -c 参数启动对话模式: cao -c")
+                sys.exit(1)
 
     if isinstance(error_info, str):
         error(f"`error_info` 是字符串类型错误: {error_info}")
@@ -348,11 +391,51 @@ def main():
         # 调用 AI API
         print("\ncao 🌿\n")
         info(f"正在使用 {model_name} 分析错误...")
-        debug(f"错误信息长度: {len(error_info.get('error', ''))}")
-        ai_response = call_ai_api(model_config, error_info)
-        debug("AI 响应已接收")
+        debug(f"错误信息长度: {len(error_info.get('error', '')) if error_info is not None else 0}")
+        
+        # 显示动画加载指示器
+        loading_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+        print("", end="\r")
+        i = 0
+        
+        # 启动API调用
+        import threading
+        response_result = {"ai_response": None, "error": None, "done": False}
+        
+        def api_call_thread():
+            try:
+                response_result["ai_response"] = call_ai_api(model_config, error_info)
+            except Exception as e:
+                response_result["error"] = str(e)
+            finally:
+                response_result["done"] = True
+                
+        thread = threading.Thread(target=api_call_thread)
+        thread.daemon = True  # 设置为守护线程，这样主线程退出时它会自动退出
+        thread.start()
+        
+        # 显示加载动画，直到API调用完成
+        start_time = time.time()
+        while not response_result["done"]:
+            if time.time() - start_time > 0.1:  # 每100ms更新一次
+                print(f"\r{loading_chars[i % len(loading_chars)]} AI正在思考...", end="", flush=True)
+                i += 1
+                start_time = time.time()
+            time.sleep(0.01)  # 小的睡眠以减少CPU使用
+            
+        # 清除加载动画
+        print("\r" + " " * 50 + "\r", end="", flush=True)
+        
+        # 处理结果
+        if response_result["error"]:
+            error(f"AI API调用出错: {response_result['error']}")
+            ai_response = f"抱歉，我遇到了一些问题: {response_result['error']}"
+        else:
+            ai_response = response_result["ai_response"]
+            debug("AI 响应已接收")
 
         # 打印 AI 响应
+        print("\n\n")  # 添加两个空行作为间隔
         print_with_borders(ai_response)
 
         # 打印对话模式提示

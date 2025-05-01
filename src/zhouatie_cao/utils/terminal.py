@@ -77,8 +77,13 @@ def get_string_display_width(s: str) -> int:
     return width
 
 
-def print_with_borders(text: str):
-    """打印带边框的文本"""
+def print_with_borders(text: str, mode: str = "normal"):
+    """打印带边框的文本
+    
+    Args:
+        text: 要打印的文本
+        mode: 打印模式，可选值：normal(标准模式), chat(聊天模式)
+    """
     terminal_width, _ = get_terminal_size()
     content_width = min(terminal_width - 4, 100)  # 最大内容宽度限制
 
@@ -120,27 +125,42 @@ def print_with_borders(text: str):
 
     # 计算边框宽度为内容宽度+2（两侧各1个空格）
     border_width = content_width + 2
+    
+    # 根据不同模式设置不同的边框和标题
+    if mode == "chat":
+        # 聊天模式使用更轻松的样式
+        top_border = "╭" + "╌" * border_width + "╮"
+        divider = "┈" * border_width
+        bottom_border = "╰" + "╌" * border_width + "╯"
+        side_border = "╎"
+        title = "\033[1;32m🌿 小草闲聊 🌱\033[0m"
+        title_display_width = get_string_display_width("🌿 小草闲聊 🌱")
+    else:
+        # 分析结果模式使用正式的样式
+        top_border = "╭" + "─" * border_width + "╮"
+        divider = "─" * border_width
+        bottom_border = "╰" + "─" * border_width + "╯"
+        side_border = "│"
+        title = "\033[1;36mAI 分析结果\033[0m"
+        title_display_width = get_string_display_width("AI 分析结果")
 
     # 打印上边框
-    print("╭" + "─" * border_width + "╮")
+    print(top_border)
 
     # 打印标题行
-    title = "\033[1;36mAI 分析结果\033[0m"
-    # 计算标题文本的实际显示宽度（不包括ANSI转义序列）
-    title_display_width = get_string_display_width("AI 分析结果")
     # 计算需要的填充空格数量
     padding = " " * (content_width - title_display_width)
-    print("│ " + title + padding + " │")
+    print(f"{side_border} {title}{padding} {side_border}")
 
     # 打印分隔线
-    print("├" + "─" * border_width + "┤")
+    print(f"├{divider}┤")
 
     # 打印内容行
     for line in lines:
         # 计算填充空格，考虑显示宽度而不是字符数
         display_width = get_string_display_width(line)
         padding = " " * (content_width - display_width)
-        print("│ " + line + padding + " │")
+        print(f"{side_border} {line}{padding} {side_border}")
 
     # 打印下边框
-    print("╰" + "─" * border_width + "╯")
+    print(bottom_border)
