@@ -78,7 +78,9 @@ def parse_args():
 
 
 def handle_interactive_session(
-    model_config: Dict[str, Any], initial_error_info: Optional[Dict[str, Any]] = None, is_chat_mode: bool = False
+    model_config: Dict[str, Any],
+    initial_error_info: Optional[Dict[str, Any]] = None,
+    is_chat_mode: bool = False,
 ):
     """处理交互式对话会话
 
@@ -105,7 +107,7 @@ def handle_interactive_session(
 
     # 检查是否为纯聊天模式
     is_pure_chat_mode = not initial_error_info and is_chat_mode
-    
+
     # 如果有初始错误信息，添加到上下文
     if initial_error_info:
         command = initial_error_info.get(
@@ -155,13 +157,16 @@ def handle_interactive_session(
             conversation_context.append(
                 {
                     "role": "assistant",
-                    "content": "嗨！我是小草 🌿，你的编程闲聊伙伴！今天想聊点什么？技术问题、开发困扰，还是只是想放松一下大脑？我随时准备陪你唠嗑～",
+                    "content": "嗨！我是小草 🌱，你的编程闲聊伙伴！今天想聊点什么？技术问题、开发困扰，还是只是想放松一下大脑？我随时准备陪你唠嗑～",
                 }
             )
 
             # 打印初始欢迎消息
-            print("\ncao 🌿 轻松聊天模式\n")
-            print_with_borders("嗨！我是小草 🌿，你的编程闲聊伙伴！今天想聊点什么？技术问题、开发困扰，还是只是想放松一下大脑？我随时准备陪你唠嗑～", mode="chat")
+            # print("\ncao 🌿 \n")
+            print_with_borders(
+                "嗨！我是小草 🌱，你的编程闲聊伙伴！今天想聊点什么？技术问题、开发困扰，还是只是想放松一下大脑？我随时准备陪你唠嗑～",
+                mode="chat",
+            )
         else:
             # 如果没有初始错误，且不是纯聊天模式，则使用一般的问候
             conversation_context.append(
@@ -178,7 +183,7 @@ def handle_interactive_session(
             )
 
             # 打印初始欢迎消息
-            print("\ncao 🌿 对话模式\n")
+            print("\ncao 🌱 对话模式\n")
             print_with_borders("你好！我是命令行助手，有什么可以帮助你的吗？")
 
     # 设置信号处理，优雅地处理Ctrl+C
@@ -198,7 +203,7 @@ def handle_interactive_session(
 
             # 检查退出命令
             if user_input.strip().lower() in ["/exit", "/quit", "exit", "quit"]:
-                print("退出对话模式")
+                print("\n退出对话模式")
                 break
 
             # 如果输入为空，则跳过
@@ -212,10 +217,10 @@ def handle_interactive_session(
             loading_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
             print("", end="\r")
             i = 0
-            
+
             # 创建结果容器
             response_result = {"ai_response": None, "error": None, "done": False}
-            
+
             # 定义API调用线程函数
             def api_call_thread():
                 try:
@@ -228,25 +233,30 @@ def handle_interactive_session(
                     response_result["error"] = str(e)
                 finally:
                     response_result["done"] = True
-            
+
             # 启动API调用线程
             import threading
+
             thread = threading.Thread(target=api_call_thread)
             thread.daemon = True  # 设置为守护线程，这样主线程退出时它会自动退出
             thread.start()
-            
+
             # 显示加载动画，直到API调用完成
             start_time = time.time()
             while not response_result["done"]:
                 if time.time() - start_time > 0.1:  # 每100ms更新一次
-                    print(f"\r{loading_chars[i % len(loading_chars)]} AI正在思考...", end="", flush=True)
+                    print(
+                        f"\r{loading_chars[i % len(loading_chars)]} ",
+                        end="",
+                        flush=True,
+                    )
                     i += 1
                     start_time = time.time()
                 time.sleep(0.01)  # 小的睡眠以减少CPU使用
-            
+
             # 清除加载动画
             print("\r" + " " * 50 + "\r", end="", flush=True)
-            
+
             # 处理结果
             if response_result["error"]:
                 ai_response = f"抱歉，我遇到了一些问题: {response_result['error']}"
@@ -256,10 +266,18 @@ def handle_interactive_session(
             # 添加AI响应到上下文
             conversation_context.append({"role": "assistant", "content": ai_response})
 
-            # 添加更多空行作为消息间隔
-            print("\n\n")
-            # 打印AI响应，聊天模式下使用更轻松的边框样式
-            print_with_borders(ai_response, mode="chat" if is_chat_mode else "normal")
+            # 打印小草的名字和AI响应，聊天模式下不使用边框
+            if is_chat_mode:
+                print("小草🌱:")
+                # 逐字打印回复，增加互动感
+                for char in ai_response:
+                    print(char, end="", flush=True)
+                    time.sleep(0.005)  # 每个字符间隔5毫秒，保持流畅
+                print("\n")  # 增加额外的空行，为用户输入提供更多空间
+            else:
+                print("小草🌱:")
+                print_with_borders(ai_response, mode="normal")
+                print()  # 增加额外的空行，为用户输入提供更多空间
 
             # 如果对话历史太长，清理最早的对话（保留system消息）
             if len(conversation_context) > 20:
@@ -391,17 +409,20 @@ def main():
         # 调用 AI API
         print("\ncao 🌿\n")
         info(f"正在使用 {model_name} 分析错误...")
-        debug(f"错误信息长度: {len(error_info.get('error', '')) if error_info is not None else 0}")
-        
+        debug(
+            f"错误信息长度: {len(error_info.get('error', '')) if error_info is not None else 0}"
+        )
+
         # 显示动画加载指示器
         loading_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
         print("", end="\r")
         i = 0
-        
+
         # 启动API调用
         import threading
+
         response_result = {"ai_response": None, "error": None, "done": False}
-        
+
         def api_call_thread():
             try:
                 response_result["ai_response"] = call_ai_api(model_config, error_info)
@@ -409,23 +430,27 @@ def main():
                 response_result["error"] = str(e)
             finally:
                 response_result["done"] = True
-                
+
         thread = threading.Thread(target=api_call_thread)
         thread.daemon = True  # 设置为守护线程，这样主线程退出时它会自动退出
         thread.start()
-        
+
         # 显示加载动画，直到API调用完成
         start_time = time.time()
         while not response_result["done"]:
             if time.time() - start_time > 0.1:  # 每100ms更新一次
-                print(f"\r{loading_chars[i % len(loading_chars)]} AI正在思考...", end="", flush=True)
+                print(
+                    f"\r{loading_chars[i % len(loading_chars)]} AI正在思考...",
+                    end="",
+                    flush=True,
+                )
                 i += 1
                 start_time = time.time()
             time.sleep(0.01)  # 小的睡眠以减少CPU使用
-            
+
         # 清除加载动画
         print("\r" + " " * 50 + "\r", end="", flush=True)
-        
+
         # 处理结果
         if response_result["error"]:
             error(f"AI API调用出错: {response_result['error']}")
@@ -434,8 +459,8 @@ def main():
             ai_response = response_result["ai_response"]
             debug("AI 响应已接收")
 
-        # 打印 AI 响应
-        print("\n\n")  # 添加两个空行作为间隔
+        # 打印小草的名字和AI响应
+        print("小草🌿:")
         print_with_borders(ai_response)
 
         # 打印对话模式提示

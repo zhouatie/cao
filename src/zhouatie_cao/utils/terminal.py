@@ -79,7 +79,7 @@ def get_string_display_width(s: str) -> int:
 
 def print_with_borders(text: str, mode: str = "normal"):
     """打印带边框的文本
-    
+
     Args:
         text: 要打印的文本
         mode: 打印模式，可选值：normal(标准模式), chat(聊天模式)
@@ -125,7 +125,7 @@ def print_with_borders(text: str, mode: str = "normal"):
 
     # 计算边框宽度为内容宽度+2（两侧各1个空格）
     border_width = content_width + 2
-    
+
     # 根据不同模式设置不同的边框和标题
     if mode == "chat":
         # 聊天模式使用更轻松的样式
@@ -133,8 +133,8 @@ def print_with_borders(text: str, mode: str = "normal"):
         divider = "┈" * border_width
         bottom_border = "╰" + "╌" * border_width + "╯"
         side_border = "╎"
-        title = "\033[1;32m🌿 小草闲聊 🌱\033[0m"
-        title_display_width = get_string_display_width("🌿 小草闲聊 🌱")
+        title = "\033[1;32m小草 🌱\033[0m"
+        title_display_width = get_string_display_width("小草 🌱")
     else:
         # 分析结果模式使用正式的样式
         top_border = "╭" + "─" * border_width + "╮"
