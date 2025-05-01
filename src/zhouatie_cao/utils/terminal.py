@@ -77,24 +77,22 @@ def get_string_display_width(s: str) -> int:
     return width
 
 
-def print_with_borders(text: str, mode: str = "normal"):
-    """打印带边框的文本
+def _process_text_to_lines(text: str, content_width: int) -> list:
+    """处理文本换行，将文本按照指定宽度拆分成多行
 
     Args:
-        text: 要打印的文本
-        mode: 打印模式，可选值：normal(标准模式), chat(聊天模式)
-    """
-    terminal_width, _ = get_terminal_size()
-    content_width = min(terminal_width - 4, 100)  # 最大内容宽度限制
+        text: 要处理的文本
+        content_width: 内容区域宽度
 
-    # 处理文本换行
+    Returns:
+        list: 拆分后的文本行列表
+    """
     lines = []
     for line in text.split("\n"):
         if get_string_display_width(line) <= content_width:
             lines.append(line)
         else:
             # 长行分割
-            # 对于中文文本，按字符分割会更好
             is_cjk_text = any(ord(c) > 127 for c in line)
 
             if is_cjk_text:
@@ -123,44 +121,78 @@ def print_with_borders(text: str, mode: str = "normal"):
                 if current_line:
                     lines.append(current_line)
 
-    # 计算边框宽度为内容宽度+2（两侧各1个空格）
-    border_width = content_width + 2
+    return lines
 
-    # 根据不同模式设置不同的边框和标题
-    if mode == "chat":
-        # 聊天模式使用更轻松的样式
-        top_border = "╭" + "╌" * border_width + "╮"
-        divider = "┈" * border_width
-        bottom_border = "╰" + "╌" * border_width + "╯"
-        side_border = "╎"
-        title = "\033[1;32m小草 🌱\033[0m"
-        title_display_width = get_string_display_width("小草 🌱")
-    else:
-        # 分析结果模式使用正式的样式
-        top_border = "╭" + "─" * border_width + "╮"
-        divider = "─" * border_width
-        bottom_border = "╰" + "─" * border_width + "╯"
-        side_border = "│"
-        title = "\033[1;36mAI 分析结果\033[0m"
-        title_display_width = get_string_display_width("AI 分析结果")
 
-    # 打印上边框
-    print(top_border)
+def _print_normal_mode(text: str):
+    """以标准模式（带边框）打印文本
 
-    # 打印标题行
-    # 计算需要的填充空格数量
-    padding = " " * (content_width - title_display_width)
-    print(f"{side_border} {title}{padding} {side_border}")
+    Args:
+        text: 要打印的文本
+    """
+    terminal_width, _ = get_terminal_size()
+    content_width = terminal_width - 4  # 左右各2个字符的边框
 
-    # 打印分隔线
-    print(f"├{divider}┤")
+    # 处理文本换行
+    lines = _process_text_to_lines(text, content_width)
 
-    # 打印内容行
+    # 绘制边框和内容
+    horizontal_border = "─" * (terminal_width - 2)
+    print(f"┌{horizontal_border}┐")
+
+    # 添加小草标题行
+    title = "\033[1;32m小草 🌱\033[0m"
+    # 计算标题文本的实际显示宽度（不包括ANSI颜色代码）
+    title_display_width = get_string_display_width("小草 🌱")
+    title_padding = " " * (content_width - title_display_width)
+    print(f"│ {title}{title_padding} │")
+
+    # 添加分隔线
+    print(f"├{horizontal_border}┤")
+
+    # 打印正文内容
     for line in lines:
-        # 计算填充空格，考虑显示宽度而不是字符数
-        display_width = get_string_display_width(line)
-        padding = " " * (content_width - display_width)
-        print(f"{side_border} {line}{padding} {side_border}")
+        padding = " " * (content_width - get_string_display_width(line))
+        print(f"│ {line}{padding} │")
 
-    # 打印下边框
-    print(bottom_border)
+    print(f"└{horizontal_border}┘")
+
+
+def _print_chat_mode(text: str):
+    """以聊天模式（带前缀）打印文本
+
+    Args:
+        text: 要打印的文本
+    """
+    terminal_width, _ = get_terminal_size()
+
+    # 处理文本换行
+    lines = _process_text_to_lines(text, terminal_width)
+
+    # 小草消息使用绿色前缀
+    prefix = "\033[1;32m小草 🌱\033[0m: "
+    print(prefix)
+    for line in lines:
+        print(line)
+
+
+def print_with_borders(text: str, mode: str = "normal", role: str = "assistant"):
+    """打印文本，添加边框或前缀
+
+    Args:
+        text: 要打印的文本
+        mode: 打印模式，可选值：normal(标准模式), chat(聊天模式)
+        role: 消息角色，可选值: assistant(小草消息), user(用户消息)
+    """
+    # 用户消息不需要显示，因为CLI中已经有"cao 🌿 > "前缀
+    if role != "assistant":
+        return
+
+    # 根据模式选择相应的打印函数
+    if mode == "normal":
+        _print_normal_mode(text)
+    else:
+        _print_chat_mode(text)
+
+    # 打印额外的换行符以增加间距
+    # print()
