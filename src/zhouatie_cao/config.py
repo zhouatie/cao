@@ -60,7 +60,8 @@ def load_config() -> Dict[str, Any]:
             
             return config
         except Exception as e:
-            print(f"Error loading config file: {e}")
+            import logging
+            logging.error(f"加载配置文件错误: {e}", exc_info=True)
             return DEFAULT_CONFIG
     else:
         # Create default config if it doesn't exist
@@ -76,7 +77,8 @@ def save_config(config: Dict[str, Any]) -> bool:
             json.dump(config, f, indent=2)
         return True
     except Exception as e:
-        print(f"Error saving config file: {e}")
+        import logging
+        logging.error(f"保存配置文件错误: {e}", exc_info=True)
         return False
 
 def add_model(name: str, api_base: str, model: str, api_key: Optional[str] = None) -> bool:

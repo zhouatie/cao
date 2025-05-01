@@ -8,6 +8,7 @@
 import argparse
 import os
 import sys
+import logging
 from typing import Dict, List, Optional
 
 # 导入配置管理模块
@@ -15,6 +16,10 @@ from . import config
 from .utils.terminal import print_with_borders
 from .utils.command import execute_command, get_last_command_error
 from .ai_client import call_ai_api
+from .utils.logger import get_logger, debug, info, warning, error, critical
+
+# 获取日志记录器
+logger = get_logger(__name__)
 
 
 def parse_args():
@@ -53,6 +58,9 @@ def main():
     # 如果设置了调试标志，则设置环境变量以便在整个执行过程中使用
     if args.debug:
         os.environ["CAO_DEBUG_MODE"] = "1"
+        os.environ["CAO_LOG_LEVEL"] = "DEBUG"
+        logger.setLevel(logging.DEBUG)
+        debug("调试模式已启用")
 
     error_info = None
 
@@ -73,11 +81,10 @@ def main():
             bypass_returncode = os.environ.get("CAO_BYPASS_RETURN_CODE")
 
             if bypass_command and bypass_error and bypass_returncode:
-                print("\n--- 使用环境变量中的命令结果（仅用于测试） ---")
-                print(f"命令: {bypass_command}")
-                print(f"返回码: {bypass_returncode}")
-                print(f"错误信息: {bypass_error}")
-                print("------------------------------\n")
+                debug("使用环境变量中的命令结果（仅用于测试）")
+                debug(f"命令: {bypass_command}")
+                debug(f"返回码: {bypass_returncode}")
+                debug(f"错误信息: {bypass_error}")
 
                 error_info = {
                     "command": bypass_command,
@@ -94,7 +101,8 @@ def main():
             sys.exit(1)
 
     if isinstance(error_info, str):
-        print(f"`error_info` 是否是字符串类型 错误: {error_info}")
+        error(f"`error_info` 是字符串类型错误: {error_info}")
+        print(f"错误: {error_info}")
         sys.exit(1)
 
     if not error_info:
@@ -107,13 +115,11 @@ def main():
 
     # 调试模式打印错误信息
     if args.debug:
-        print("\n--- 调试信息 ---")
-        print(f"原始命令: {error_info.get('original_command', '未知命令')}")
-        print(f"解析命令: {error_info.get('command', '未知命令')}")
-        print(f"返回码: {error_info.get('returncode', -1)}")
-        print("错误信息:")
-        print(error_info.get("error", "无错误信息"))
-        print("----------------\n")
+        debug("处理命令错误信息")
+        debug(f"原始命令: {error_info.get('original_command', '未知命令')}")
+        debug(f"解析命令: {error_info.get('command', '未知命令')}")
+        debug(f"返回码: {error_info.get('returncode', -1)}")
+        debug(f"错误信息: {error_info.get('error', '无错误信息')}")
 
     # 选择 AI 模型
     SUPPORTED_MODELS = config.get_supported_models()
@@ -129,13 +135,14 @@ def main():
 
     # 调试模式下打印模型信息
     if args.debug:
-        print(f"选择的模型配置: {model_config}")
+        debug(f"选择的模型配置: {model_config}")
 
     # 调用 AI API
     print("\ncao 🌿\n")
-    print(f"正在使用 {model_name} 分析错误...")
-    print()
+    info(f"正在使用 {model_name} 分析错误...")
+    debug(f"错误信息长度: {len(error_info.get('error', ''))}")
     ai_response = call_ai_api(model_config, error_info)
+    debug("AI 响应已接收")
 
     # 打印 AI 响应
     print_with_borders(ai_response)
