@@ -26,7 +26,6 @@ def parse_args():
 
     parser.add_argument("-d", "--debug", action="store_true", help="开启调试模式")
     parser.add_argument("--config", action="store_true", help="配置 AI 模型")
-    parser.add_argument("-c", "--chat", action="store_true", help="启动持续对话模式")
-    parser.add_argument("command", nargs="*", help="要执行的命令 (如果提供)")
+    # 移除了命令参数，因为不再支持直接执行命令并分析错误
 
     return parser.parse_args()

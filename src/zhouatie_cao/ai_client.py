@@ -8,14 +8,33 @@ AI API 客户端
 import os
 import json
 import requests
+import re
 from typing import Dict, Any, List, Optional
 from urllib.parse import urlparse
 
 
+def filter_think_tags(content: str) -> str:
+    """过滤掉模型响应中的 <think>...</think> 标签及其内容，
+    并去除前后多余的空格和换行
+    
+    Args:
+        content: 原始模型响应内容
+        
+    Returns:
+        过滤、整理后的内容
+    """
+    # 使用正则表达式移除开头的 <think>...</think> 标签及其内容
+    filtered = re.sub(r'^<think>.*?</think>\s*', '', content, flags=re.DOTALL)
+    
+    # 去除前后多余的空格和换行
+    filtered = filtered.strip()
+    
+    return filtered
+
+
 def call_ai_api(
     model_config: Dict,
-    error_info: Optional[Dict] = None,
-    messages: Optional[List] = None,
+    messages: List,
 ) -> str:
     """调用 AI API 分析错误或处理会话消息
 
@@ -127,43 +146,8 @@ def call_ai_api(
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
 
-    # 准备消息内容
-    if messages:
-        # 如果提供了消息列表，直接使用
-        payload_messages = messages
-    elif error_info:
-        # 构建错误分析提示
-        # 优先使用原始命令（如果存在）
-        command = error_info.get(
-            "original_command", error_info.get("command", "未知命令")
-        )
-        error_text = error_info.get("error", "未知错误")
-        returncode = error_info.get("returncode", -1)
-
-        # 调试输出，帮助排查命令传递问题
-        debug(f"将发送到AI的命令: {command}")
-
-        system_message = """你是一个命令行错误分析专家。
-请分析以下命令错误并提供解决方案。重要提示：你接收的命令是用户真实输入的，不要猜测他输入了其他命令。
-例如，如果错误显示命令未找到，请分析实际给出的命令，而不是猜测用户可能想输入的其他命令。
-请用友好、轻松的语气回答，可以适当使用表情符号让回答更生动。"""
-
-        user_message = f"""
-命令: {command}
-返回码: {returncode}
-错误信息:
-{error_text}
-
-请分析这个特定命令产生的错误，并提供准确的解决方案。避免猜测用户可能想要运行的其他命令，除非错误信息明确显示命令被系统解析为其他内容。
-请用轻松友好的口吻回答，就像和朋友聊天一样，可以适当使用一些表情符号，让回答更加生动有趣。
-"""
-        payload_messages = [
-            {"role": "system", "content": system_message},
-            {"role": "user", "content": user_message},
-        ]
-    else:
-        error("未提供错误信息或消息列表")
-        return "错误: API调用未提供错误信息或会话消息"
+    # 直接使用提供的消息内容
+    payload_messages = messages
 
     payload = {
         "model": model,
@@ -207,19 +191,25 @@ def call_ai_api(
                 # Ollama 响应格式
                 if "message" in result and "content" in result["message"]:
                     debug("成功从 Ollama 响应中提取内容")
-                    return result["message"]["content"]
+                    content = result["message"]["content"]
+                    filtered_content = filter_think_tags(content)
+                    return filtered_content
                 else:
                     # 兜底处理
                     debug("使用兜底逻辑处理 Ollama 响应")
-                    return (
+                    content = (
                         result.get("choices", [{}])[0]
                         .get("message", {})
                         .get("content", "无法解析 Ollama API 响应")
                     )
+                    filtered_content = filter_think_tags(content)
+                    return filtered_content
             else:
                 # OpenAI/DeepSeek 响应格式
                 debug("使用标准 OpenAI 格式解析响应")
-                return result["choices"][0]["message"]["content"]
+                content = result["choices"][0]["message"]["content"]
+                filtered_content = filter_think_tags(content)
+                return filtered_content
         else:
             error(f"API 请求失败 (状态码: {response.status_code}): {response.text}")
             return f"API 请求失败 (状态码: {response.status_code}): {response.text}"
